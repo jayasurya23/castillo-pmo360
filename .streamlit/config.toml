@@ -1,0 +1,20 @@
+# Streamlit theme configuration.
+# Jost is loaded via `fontFaces` and applied via the body / heading / code
+# font settings (plus their sidebar twins). This is the theme-native path so
+# Streamlit handles inheritance correctly without breaking Material Icons.
+[theme]
+font            = "Jost, sans-serif"
+headingFont     = "Jost, sans-serif"
+codeFont        = "Jost, sans-serif"
+fontFaces = [
+  { family = "Jost", weight = 400, url = "https://fonts.gstatic.com/s/jost/v15/92zPtBhPNqw79Ij1E865zBUv6mTbAKFm.woff2" },
+  { family = "Jost", weight = 500, url = "https://fonts.gstatic.com/s/jost/v15/92zPtBhPNqw79Ij1E865zBUv6mTbAKtm.woff2" },
+  { family = "Jost", weight = 600, url = "https://fonts.gstatic.com/s/jost/v15/92zPtBhPNqw79Ij1E865zBUv6mTbANNm.woff2" },
+  { family = "Jost", weight = 700, url = "https://fonts.gstatic.com/s/jost/v15/92zPtBhPNqw79Ij1E865zBUv6mTbAOZm.woff2" },
+  { family = "Jost", weight = 800, url = "https://fonts.gstatic.com/s/jost/v15/92zPtBhPNqw79Ij1E865zBUv6mTbAPRm.woff2" }
+]
+
+[theme.sidebar]
+font        = "Jost, sans-serif"
+headingFont = "Jost, sans-serif"
+codeFont    = "Jost, sans-serif"

@@ -1,0 +1,30 @@
+# Core
+streamlit>=1.35.0
+sqlalchemy>=2.0.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+
+# Database
+psycopg2-binary>=2.9.0       # PostgreSQL driver (use psycopg2 in production)
+
+# LLM
+openai>=1.30.0
+
+# Document generation
+python-docx>=1.1.0           # Word .docx
+openpyxl>=3.1.0              # Excel .xlsx
+reportlab>=4.0.0             # PDF generation
+pikepdf>=8.0.0               # PDF form field overlay
+pdfplumber>=0.11.0           # PDF text + table extraction (schedule parsing)
+
+# Microsoft Graph (SharePoint, email)
+msal>=1.28.0
+requests>=2.31.0
+
+# Document parsing
+python-docx>=1.1.0
+mammoth>=1.7.0               # .docm → text for transcript parsing
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

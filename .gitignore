@@ -1,0 +1,46 @@
+# Environment
+.env
+.env.local
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Local data — meeting DB + generated outputs are not source code
+data/castillo.db
+data/outputs/
+*.sqlite
+*.sqlite-journal
+
+# Stray docs/test artifacts in the repo root (real outputs live in data/outputs/)
+/*.docx
+/*.pdf
+/*.xlsx
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+
+# Scratch / notes
+/scratch/
+/notes_local/

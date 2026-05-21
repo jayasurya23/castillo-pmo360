@@ -1,8 +1,20 @@
 # Streamlit theme configuration.
-# Jost is loaded via `fontFaces` and applied via the body / heading / code
-# font settings (plus their sidebar twins). This is the theme-native path so
-# Streamlit handles inheritance correctly without breaking Material Icons.
+# Only the Jost font customization is kept — base palette, light/dark
+# selection, and colors fall back to Streamlit's defaults. The Castillo
+# brand colors live in config.BrandColors and are applied via per-element
+# CSS injection in app/main.py (active tab, section headings, status pills,
+# etc.) rather than overriding the global theme.
 [theme]
+# Lock to light. Otherwise Streamlit auto-switches based on the user's OS
+# preference, which makes the brand-color CSS injections (red banners,
+# status pills) look off on a dark canvas. Castillo brand assets are
+# designed for light backgrounds.
+base            = "light"
+# Force darker body text. Default light-theme text + Jost Regular renders
+# too thin/gray for comfortable reading; explicit textColor + CSS overrides
+# in main.py keep contrast where it should be.
+textColor       = "#1a1a1a"
+primaryColor    = "#ad1f2b"
 font            = "Jost, sans-serif"
 headingFont     = "Jost, sans-serif"
 codeFont        = "Jost, sans-serif"
@@ -14,7 +26,9 @@ fontFaces = [
   { family = "Jost", weight = 800, url = "https://fonts.gstatic.com/s/jost/v15/92zPtBhPNqw79Ij1E865zBUv6mTbAPRm.woff2" }
 ]
 
-[theme.sidebar]
-font        = "Jost, sans-serif"
-headingFont = "Jost, sans-serif"
-codeFont    = "Jost, sans-serif"
+# Hide the developer toolbar (Deploy / Edit / Print buttons) for end users.
+# "minimal" keeps the hamburger menu so PMs can still trigger rerun /
+# clear cache if they need to; switch to "viewer" for full production
+# deployment to drop the menu entirely.
+[client]
+toolbarMode = "minimal"

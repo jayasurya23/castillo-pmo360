@@ -13,24 +13,30 @@ load_dotenv()
 # Castillo brand
 # ============================================================
 class BrandColors:
-    """Castillo Engineering brand palette. Used in PDF/docx/Streamlit."""
-    # Primary
-    RED = "#ad1f2b"
-    DARK_RED = "#991f2b"
-    NEAR_BLACK = "#1a1a1a"
-    DARK_GRAY = "#4d4d4f"
-    LIGHT_GRAY = "#bcbec0"
-    NEAR_WHITE = "#f5f5f3"
+    """Castillo Engineering brand palette, lifted from the official
+    Branding Style Guide (V2). Used in PDF/docx/Streamlit — never inline
+    hex codes elsewhere."""
+    # ---- Primary palette ----
+    RED         = "#ad1f2b"     # primary brand red
+    DARK_RED    = "#991f2b"     # darker accent / hover state
+    NEAR_BLACK  = "#333132"     # warm near-black — official guide value
+    DARK_GRAY   = "#4d4d4f"     # body text on light backgrounds
+    LIGHT_GRAY  = "#bcbec0"     # borders / inactive UI
+    NEAR_WHITE  = "#e6e7e8"     # softest gray, almost-white backgrounds
+    BROWN       = "#5e4b40"     # tertiary accent (used sparingly)
 
-    # Secondary
-    GOLD = "#c7bb2e"           # used for PDF form field borders
-    GREEN = "#278747"          # completed status
-    BLUE = "#185fa5"           # civil discipline tag
-    BRIGHT_RED = "#e12a3f"
+    # ---- Secondary palette ----
+    BRIGHT_RED   = "#e12a3f"    # punchier red, for emphasis on light bg
+    BLUE         = "#1aa6c9"    # the brand-spec blue (status: open, info)
+    GREEN        = "#278747"    # status: completed, success
+    BRIGHT_GREEN = "#4ab751"    # secondary success / positive accent
+    GOLD         = "#c7bb2e"    # status: pending, AcroForm field borders
 
-    # Status pill colors (background, text, border)
-    STATUS_OPEN = ("#fce8ea", "#791f1f", "#ad1f2b")
-    STATUS_PENDING = ("#fdeac0", "#5e3f00", "#c7bb2e")
+    # ---- Status pill colors (background, text, border) ----
+    # These are derived tints — soft fills with the brand color as the
+    # border so the pill reads as "branded" but doesn't shout.
+    STATUS_OPEN      = ("#fce8ea", "#791f1f", "#ad1f2b")
+    STATUS_PENDING   = ("#fdeac0", "#5e3f00", "#c7bb2e")
     STATUS_COMPLETED = ("#c7e9a3", "#1a3a04", "#278747")
     STATUS_CANCELLED = ("#e6e7e8", "#1a1a1a", "#888780")
 

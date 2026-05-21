@@ -152,40 +152,40 @@ STATUS_TEXT_COLORS = {
 def _styles() -> dict:
     return {
         "project": ParagraphStyle(
-            "project", fontName=PRIMARY_BOLD, fontSize=18,
-            textColor=NEAR_BLACK, spaceAfter=3, leading=22,
+            "project", fontName=PRIMARY_BOLD, fontSize=20,
+            textColor=NEAR_BLACK, spaceAfter=3, leading=24,
         ),
         "kv": ParagraphStyle(
-            "kv", fontName=PRIMARY_FONT, fontSize=9, textColor=NEAR_BLACK,
-            leading=13,
+            "kv", fontName=PRIMARY_FONT, fontSize=10, textColor=NEAR_BLACK,
+            leading=14,
         ),
         "section": ParagraphStyle(
-            "section", fontName=PRIMARY_BOLD, fontSize=14, textColor=RED,
-            spaceBefore=12, spaceAfter=5, leading=18,
+            "section", fontName=PRIMARY_BOLD, fontSize=15, textColor=RED,
+            spaceBefore=12, spaceAfter=5, leading=19,
         ),
         "attendee_line": ParagraphStyle(
-            "attendee_line", fontName=PRIMARY_FONT, fontSize=9,
-            textColor=NEAR_BLACK, leading=13, spaceAfter=3,
+            "attendee_line", fontName=PRIMARY_FONT, fontSize=10,
+            textColor=NEAR_BLACK, leading=14, spaceAfter=3,
         ),
         "bullet": ParagraphStyle(
-            "bullet", fontName=PRIMARY_FONT, fontSize=9, textColor=NEAR_BLACK,
-            leading=13, spaceAfter=2,
+            "bullet", fontName=PRIMARY_FONT, fontSize=10, textColor=NEAR_BLACK,
+            leading=14, spaceAfter=2,
         ),
         "subbullet": ParagraphStyle(
-            "subbullet", fontName=PRIMARY_FONT, fontSize=9, textColor=NEAR_BLACK,
-            leading=13, spaceAfter=2,
+            "subbullet", fontName=PRIMARY_FONT, fontSize=10, textColor=NEAR_BLACK,
+            leading=14, spaceAfter=2,
         ),
         "closing": ParagraphStyle(
-            "closing", fontName=PRIMARY_FONT, fontSize=9, textColor=NEAR_BLACK,
-            leading=13,
+            "closing", fontName=PRIMARY_FONT, fontSize=10, textColor=NEAR_BLACK,
+            leading=14,
         ),
         "table_body": ParagraphStyle(
-            "table_body", fontName=PRIMARY_FONT, fontSize=8,
-            textColor=NEAR_BLACK, leading=11,
+            "table_body", fontName=PRIMARY_FONT, fontSize=9,
+            textColor=NEAR_BLACK, leading=12,
         ),
         "table_status": ParagraphStyle(
-            "table_status", fontName=PRIMARY_BOLD, fontSize=9,
-            textColor=white, leading=11, alignment=TA_LEFT,
+            "table_status", fontName=PRIMARY_BOLD, fontSize=10,
+            textColor=white, leading=12, alignment=TA_LEFT,
         ),
     }
 
@@ -403,7 +403,7 @@ def _build_discussion_flowables(meeting, styles) -> list:
         label_md = f"<b>{dp.label}:</b> " if dp.label else ""
         text = label_md + (dp.content or "")
         if level == 0:
-            out.append(Paragraph(text, top_p_style, bulletText="●"))   # filled
+            out.append(Paragraph(text, top_p_style, bulletText="•"))   # filled
         else:
             out.append(Paragraph(text, sub_p_style, bulletText="o"))   # hollow-look
         for child in _children(dp):
@@ -514,9 +514,9 @@ def generate_meeting_minutes_pdf(meeting: Meeting, output_path: Optional[Path] =
             ("BACKGROUND",    (0, 0), (-1, 0), DARK_RED),
             ("TEXTCOLOR",     (0, 0), (-1, 0), white),
             ("FONTNAME",      (0, 0), (-1, 0), PRIMARY_BOLD),
-            ("FONTSIZE",      (0, 0), (-1, 0), 10),
+            ("FONTSIZE",      (0, 0), (-1, 0), 11),
             ("FONTNAME",      (0, 1), (-1, -1), PRIMARY_FONT),
-            ("FONTSIZE",      (0, 1), (-1, -1), 9),
+            ("FONTSIZE",      (0, 1), (-1, -1), 10),
             ("TEXTCOLOR",     (0, 1), (-1, -1), NEAR_BLACK),
             ("VALIGN",        (0, 0), (-1, 0),  "MIDDLE"),
             ("VALIGN",        (0, 1), (-1, -1), "TOP"),
@@ -529,15 +529,20 @@ def generate_meeting_minutes_pdf(meeting: Meeting, output_path: Optional[Path] =
         story.append(deliv_table)
 
     # ---- Agenda ----
+    # Render with the same ● bullet style + paragraph indent as Discussion
+    # Points below, so visual weight is uniform between the two sections.
     if meeting.agenda_items:
+        from reportlab.lib.styles import ParagraphStyle as _PS
         story.append(Paragraph("Agenda", s["section"]))
-        bullets = [
-            ListItem(Paragraph(f"<b>{item.text}</b>", s["bullet"]))
-            for item in sorted(meeting.agenda_items, key=lambda a: a.order_index)
-        ]
-        story.append(ListFlowable(
-            bullets, bulletType="bullet", bulletColor=NEAR_BLACK, leftIndent=14,
-        ))
+        agenda_p_style = _PS(
+            "agenda_item", parent=s["bullet"],
+            leftIndent=18, bulletIndent=4, firstLineIndent=0,
+            bulletFontSize=10, bulletFontName=PRIMARY_BOLD,
+        )
+        for item in sorted(meeting.agenda_items, key=lambda a: a.order_index):
+            story.append(Paragraph(
+                item.text or "", agenda_p_style, bulletText="•",
+            ))
 
     # ---- Discussion Points (with sub-points) ----
     if meeting.discussion_points:
@@ -593,10 +598,10 @@ def generate_meeting_minutes_pdf(meeting: Meeting, output_path: Optional[Path] =
             ("BACKGROUND", (0, 0), (-1, 0), DARK_RED),
             ("TEXTCOLOR",  (0, 0), (-1, 0), white),
             ("FONTNAME",   (0, 0), (-1, 0), PRIMARY_BOLD),
-            ("FONTSIZE",   (0, 0), (-1, 0), 10),
+            ("FONTSIZE",   (0, 0), (-1, 0), 11),
             # Body
             ("FONTNAME",   (0, 1), (-1, -1), PRIMARY_FONT),
-            ("FONTSIZE",   (0, 1), (-1, -1), 9),
+            ("FONTSIZE",   (0, 1), (-1, -1), 10),
             ("TEXTCOLOR",  (0, 1), (-1, -1), NEAR_BLACK),
             # Header row stays centered; body cells top-aligned so wrapped
             # Action / Owner text reads naturally from the top of the cell.
@@ -717,7 +722,7 @@ def _walk_dp_to_paragraphs(dps, styles) -> list:
         label_md = f"<b>{label}:</b> " if label else ""
         text = label_md + content
         if level == 0:
-            out.append(Paragraph(text, top_p_style, bulletText="●"))
+            out.append(Paragraph(text, top_p_style, bulletText="•"))
         else:
             out.append(Paragraph(text, sub_p_style, bulletText="o"))
         kids = getattr(dp, "sub_points", None) or []
@@ -735,7 +740,7 @@ def _empty_para(style) -> Paragraph:
 
 
 def _make_table_with_header(data, col_widths, repeat_header=True,
-                            header_font_size: float = 9,
+                            header_font_size: float = 10,
                             header_padding: float = 7) -> Table:
     """Common Castillo-styled table: red header row, light gray row dividers,
     Jost body. Caller supplies header as row 0 of ``data``. ``header_font_size``
@@ -751,7 +756,7 @@ def _make_table_with_header(data, col_widths, repeat_header=True,
         ("FONTNAME",      (0, 0), (-1, 0), PRIMARY_BOLD),
         ("FONTSIZE",      (0, 0), (-1, 0), header_font_size),
         ("FONTNAME",      (0, 1), (-1, -1), PRIMARY_FONT),
-        ("FONTSIZE",      (0, 1), (-1, -1), 8.5),
+        ("FONTSIZE",      (0, 1), (-1, -1), 9.5),
         ("TEXTCOLOR",     (0, 1), (-1, -1), NEAR_BLACK),
         ("VALIGN",        (0, 0), (-1, 0),  "MIDDLE"),
         ("VALIGN",        (0, 1), (-1, -1), "TOP"),
@@ -1078,9 +1083,9 @@ def generate_premeeting_agenda_pdf(
             ("BACKGROUND", (0, 0), (-1, 0), DARK_RED),
             ("TEXTCOLOR",  (0, 0), (-1, 0), white),
             ("FONTNAME",   (0, 0), (-1, 0), PRIMARY_BOLD),
-            ("FONTSIZE",   (0, 0), (-1, 0), 10),
+            ("FONTSIZE",   (0, 0), (-1, 0), 11),
             ("FONTNAME",   (0, 1), (-1, -1), PRIMARY_FONT),
-            ("FONTSIZE",   (0, 1), (-1, -1), 9),
+            ("FONTSIZE",   (0, 1), (-1, -1), 10),
             ("TEXTCOLOR",  (0, 1), (-1, -1), NEAR_BLACK),
             ("VALIGN",     (0, 0), (-1, 0),  "MIDDLE"),
             ("VALIGN",     (0, 1), (-1, -1), "TOP"),

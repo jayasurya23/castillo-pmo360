@@ -229,6 +229,46 @@ section[data-testid="stSidebar"] button[kind="primaryFormSubmit"] * {{
   margin-bottom: 14px;
   font-weight: 600;
 }}
+/* Hide the native Streamlit sidebar — the top header bar below replaces
+   everything it used to host. */
+section[data-testid="stSidebar"] {{ display: none !important; }}
+[data-testid="collapsedControl"] {{ display: none !important; }}
+/* Reserve enough top padding so our header bar clears Streamlit's
+   developer toolbar (the dark band with the menu). */
+.main .block-container,
+[data-testid="stMainBlockContainer"] {{ padding-top: 3.5rem; max-width: 100%; }}
+
+/* Global search input — red focus accent (color of the border depends on
+   theme; see the theme-specific block below). */
+input[aria-label="Global search"] {{
+  transition: border-color 0.15s, box-shadow 0.15s;
+}}
+input[aria-label="Global search"]:focus {{
+  border-color: {BrandColors.RED} !important;
+  box-shadow: 0 0 0 3px rgba(173, 31, 43, 0.20) !important;
+  outline: none !important;
+}}
+
+/* Inactive tab buttons — subtle red lift on hover (theme-agnostic) */
+div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"]:hover {{
+  border-color: {BrandColors.RED} !important;
+  color: {BrandColors.RED} !important;
+}}
+
+/* Streamlit metric cards — red accent border-left */
+div[data-testid="stMetric"] {{
+  border-left: 3px solid {BrandColors.RED};
+  padding-left: 12px;
+  border-radius: 0 4px 4px 0;
+}}
+
+/* Popover trigger buttons in the breadcrumb — keep neutral but pick up
+   red on hover so the interactivity is obvious */
+[data-testid="stPopover"] > div > button:hover {{
+  border-color: {BrandColors.RED} !important;
+  color: {BrandColors.RED} !important;
+}}
+
 /* Status pills — color codes from Castillo secondary palette */
 .status-open      {{ background:#1aa6c9; color:#fff;    padding:3px 10px; border-radius:11px; font-size:10px; font-weight:700; text-transform:uppercase; }}
 .status-pending   {{ background:#c7bb2e; color:#fff;    padding:3px 10px; border-radius:11px; font-size:10px; font-weight:700; text-transform:uppercase; }}
@@ -262,6 +302,95 @@ section[data-testid="stSidebar"] button[kind="primaryFormSubmit"] * {{
 }}
 </style>
 """, unsafe_allow_html=True)
+
+
+# ============================================================
+# (Light/dark toggle removed — app is locked to light theme via
+#  .streamlit/config.toml's `base = "light"`. Brand-color CSS injection
+#  for the active tab, section banners, status pills, etc. is in the
+#  block above; nothing theme-conditional remains here.)
+# ============================================================
+st.markdown(
+    f"""
+    <style>
+    /* Per-widget readability overrides on top of Streamlit's default light
+       theme. Jost Regular renders thin at small sizes; explicit dark text
+       on every widget surface ensures legibility. */
+
+    /* Markdown body */
+    .stApp, .stMarkdown, .stMarkdown p, .stMarkdown li, .stMarkdown span,
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] li,
+    [data-testid="stMarkdownContainer"] div:not([class*="status-"]) {{
+        color: #1a1a1a;
+    }}
+
+    /* Captions — slightly muted but legible */
+    .stCaption, [data-testid="stCaptionContainer"] {{
+        color: #4d4d4f !important;
+    }}
+
+    /* Inputs / textareas / date pickers */
+    input, textarea,
+    [data-testid="stTextInput"] input,
+    [data-testid="stTextArea"] textarea,
+    [data-testid="stNumberInput"] input,
+    [data-testid="stDateInput"] input {{
+        color: #1a1a1a !important;
+    }}
+
+    /* Selectbox + multiselect value display */
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] > div,
+    [data-baseweb="select"] [role="combobox"] {{
+        color: #1a1a1a !important;
+    }}
+    [data-baseweb="menu"] li,
+    [role="listbox"] [role="option"] {{
+        color: #1a1a1a !important;
+    }}
+
+    /* Secondary buttons (inactive tab pills, popover triggers) */
+    .stButton > button[kind="secondary"],
+    .stFormSubmitButton > button[kind="secondary"],
+    .stDownloadButton > button[kind="secondary"],
+    [data-testid="stPopover"] > div > button {{
+        color: #1a1a1a !important;
+    }}
+
+    /* Metric tiles — labels muted, values bold + dark */
+    div[data-testid="stMetric"] {{
+        background: #fafafa;
+    }}
+    div[data-testid="stMetricValue"] {{
+        color: #1a1a1a !important;
+    }}
+    div[data-testid="stMetricLabel"] {{
+        color: #4d4d4f !important;
+    }}
+
+    /* Widget labels above inputs */
+    [data-testid="stWidgetLabel"],
+    [data-testid="stWidgetLabel"] * {{
+        color: #1a1a1a !important;
+    }}
+
+    /* Header separator */
+    .pmo360-header-sep {{
+        border-bottom: 1px solid #e6e7e8 !important;
+        margin: 6px 0 10px 0;
+    }}
+
+    /* Placeholders kept lighter so they read as hint text */
+    input::placeholder, textarea::placeholder {{
+        color: #bcbec0 !important;
+        opacity: 1 !important;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 # Make Tab insert 2 spaces inside textareas instead of moving focus. The script
 # runs in a tiny iframe but reaches up to the parent document and installs a
@@ -342,6 +471,40 @@ _components.html(
         });
         obs.observe(doc.body, { childList: true, subtree: true, characterData: true });
     }
+
+    // Cmd/Ctrl+K → focus the global search input. Escape clears + blurs it.
+    if (!doc.__pmo360CmdKInstalled) {
+        doc.__pmo360CmdKInstalled = true;
+        function findSearchInput() {
+            // Streamlit's text_input renders as <input aria-label="...">; we
+            // match the one with our specific label.
+            return doc.querySelector('input[aria-label="Global search"]');
+        }
+        doc.addEventListener('keydown', function(e) {
+            const isCmdK = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k';
+            if (isCmdK) {
+                const input = findSearchInput();
+                if (input) {
+                    e.preventDefault();
+                    input.focus();
+                    input.select();
+                }
+                return;
+            }
+            if (e.key === 'Escape') {
+                const input = findSearchInput();
+                if (input && input === doc.activeElement) {
+                    // Clear via the native setter so React/Streamlit see it
+                    const setter = Object.getOwnPropertyDescriptor(
+                        HTMLInputElement.prototype, 'value'
+                    ).set;
+                    setter.call(input, '');
+                    input.dispatchEvent(new Event('input', {bubbles: true}));
+                    input.blur();
+                }
+            }
+        }, true);
+    }
     </script>
     """,
     height=0,
@@ -369,6 +532,7 @@ _init()
 import re as _re_url
 
 TAB_TO_SLUG = {
+    "🏠 Home":         "home",
     "📥 Capture":      "capture",
     "📝 Review":       "review",
     "👁️ Preview":      "preview",
@@ -466,277 +630,568 @@ def _sync_url_params(desired: dict) -> None:
 
 
 # ============================================================
-# Sidebar — project picker + navigation
+# Top header bar — replaces the old sidebar entirely.
+#   [ PMO 360 logo ]  [ 📁 Client ▾ ]  ›  [ 🏷️ Portfolio ▾ ]   [ DEV ]   [ ⚙️ ]
+# Client / Portfolio popovers swap the selection. ⚙️ opens admin modals
+# (New client / New portfolio / Delete portfolio).
 # ============================================================
-with st.sidebar:
-    # Platform branding — PMO 360 logo on a white pill (the logo has black
-    # text + red accent, so it needs a light background to read on the dark
-    # sidebar). Falls back to the original text branding if the file is
-    # missing. The tagline + tool-name pill stay below as before.
-    import base64 as _b64
-    _logo_dir = Path(__file__).resolve().parent.parent / "assets" / "logo"
-    _pmo_logo = _logo_dir / "pmo360_logo.png"
+import base64 as _b64
+
+# Pull clients + resolve the active client / portfolio (was the sidebar's
+# job). URL-seeding logic preserved verbatim.
+with session_scope() as session:
+    clients = list_clients(session)
+    client_options = {c.name: c.id for c in clients}
+
+if client_options:
+    _client_names = list(client_options.keys())
+    if "sidebar_client_name" not in st.session_state:
+        _url_match = _find_name_by_slug(_url_client, _client_names)
+        st.session_state.sidebar_client_name = _url_match or _client_names[0]
+    elif st.session_state.sidebar_client_name not in _client_names:
+        st.session_state.sidebar_client_name = _client_names[0]
+    chosen_client = st.session_state.sidebar_client_name
+    client_id = client_options[chosen_client]
+else:
+    chosen_client = None
+    client_id = None
+
+if client_id:
+    with session_scope() as session:
+        projects = list_projects(session, client_id)
+        proj_options = {p.name: p.id for p in projects}
+    if proj_options:
+        _portfolio_names = list(proj_options.keys())
+        if "sidebar_portfolio_name" not in st.session_state:
+            _url_match = _find_name_by_slug(_url_portfolio, _portfolio_names)
+            st.session_state.sidebar_portfolio_name = _url_match or _portfolio_names[0]
+        elif st.session_state.sidebar_portfolio_name not in _portfolio_names:
+            st.session_state.sidebar_portfolio_name = _portfolio_names[0]
+        chosen_proj = st.session_state.sidebar_portfolio_name
+        project_id = proj_options[chosen_proj]
+    else:
+        chosen_proj = None
+        project_id = None
+        proj_options = {}
+else:
+    chosen_proj = None
+    project_id = None
+    proj_options = {}
+
+# --- Render header row ---
+_logo_dir = Path(__file__).resolve().parent.parent / "assets" / "logo"
+_pmo_logo = _logo_dir / "pmo360_logo.png"
+
+h_logo, h_breadcrumb, h_dev, h_gear = st.columns(
+    [1.2, 5.7, 1.1, 0.5], vertical_alignment="center",
+)
+
+with h_logo:
     if _pmo_logo.exists():
         _pmo_b64 = _b64.b64encode(_pmo_logo.read_bytes()).decode()
+        # The PMO 360 logo art has BLACK text — needs a light backdrop to
+        # read on the dark page. Wrap in a white pill matching the popover
+        # button height so it aligns with the breadcrumb next to it.
+        # Note: uses `#fff` (not `white`) so the dark-mode catch-all CSS
+        # rule that flips `background:white` divs to dark doesn't apply.
         st.markdown(
-            f'<div style="background:white;border-radius:6px;'
-            f'padding:8px 12px;margin:4px 0 6px;text-align:center;">'
+            f'<div style="display:inline-flex;align-items:center;'
+            f'justify-content:center;background:#fff;border-radius:6px;'
+            f'padding:6px 12px;min-height:42px;">'
             f'<img src="data:image/png;base64,{_pmo_b64}" '
-            f'style="max-width:100%;height:auto;max-height:46px;" '
-            f'alt="PMO 360" />'
+            f'style="max-height:28px;max-width:100%;height:auto;'
+            f'display:block;" alt="PMO 360" />'
             f'</div>',
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            '<div style="margin:4px 0 2px;">'
-            f'<span style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:white;">PMO </span>'
-            f'<span style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:{BrandColors.RED};">360</span>'
-            '<span style="font-size:11px;font-weight:700;color:white;vertical-align:super;">™</span>'
+            '<div style="display:flex;align-items:center;min-height:42px;'
+            'padding:6px 0;font-weight:800;font-size:22px;'
+            'letter-spacing:-0.5px;">'
+            f'PMO&nbsp;<span style="color:{BrandColors.RED}">360</span>'
+            '<sup style="font-size:11px;font-weight:700;'
+            'margin-left:2px;">™</sup>'
             '</div>',
             unsafe_allow_html=True,
         )
-    st.markdown(
-        f'<div style="background:{BrandColors.RED};color:white;padding:5px 10px;'
-        'border-radius:5px;font-size:11px;font-weight:700;margin:8px 0 10px;'
-        'display:flex;align-items:center;gap:6px;">'
-        f'📝 <span>{TOOL_NAME}</span>'
-        '</div>',
-        unsafe_allow_html=True,
+
+with h_breadcrumb:
+    bc_client, bc_arrow, bc_proj = st.columns(
+        [3, 0.3, 5], vertical_alignment="center",
     )
-    if is_local_dev():
+    with bc_client:
+        if client_options:
+            with st.popover(f"📁 {chosen_client}", use_container_width=True):
+                st.caption("Switch client")
+                new_client = st.selectbox(
+                    "Client",
+                    list(client_options.keys()),
+                    index=list(client_options.keys()).index(chosen_client),
+                    label_visibility="collapsed",
+                    key="header_client_select",
+                )
+                if new_client != chosen_client:
+                    st.session_state.sidebar_client_name = new_client
+                    # Force the portfolio picker to re-pick for the new client
+                    st.session_state.pop("sidebar_portfolio_name", None)
+                    st.rerun()
+        else:
+            st.markdown(
+                '<span style="color:#bcbec0;font-size:13px;">No clients</span>',
+                unsafe_allow_html=True,
+            )
+    with bc_arrow:
         st.markdown(
-            '<div style="background:#c7bb2e;color:#1a1a1a;padding:3px 8px;'
-            'border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">'
-            'LOCAL DEV MODE</div>',
+            '<div style="color:#bcbec0;font-size:20px;text-align:center;'
+            'line-height:1;">›</div>',
             unsafe_allow_html=True,
         )
-    st.divider()
-
-    # Project picker
-    with session_scope() as session:
-        clients = list_clients(session)
-        client_options = {c.name: c.id for c in clients}
-
-    if client_options:
-        _client_names = list(client_options.keys())
-        # Seed from URL on first render of this session. After that, the
-        # widget owns its own state via `key=`. If the stored name has been
-        # deleted, silently fall back to the first available client.
-        if "sidebar_client_name" not in st.session_state:
-            _url_match = _find_name_by_slug(_url_client, _client_names)
-            st.session_state.sidebar_client_name = _url_match or _client_names[0]
-        elif st.session_state.sidebar_client_name not in _client_names:
-            st.session_state.sidebar_client_name = _client_names[0]
-        chosen_client = st.selectbox(
-            "Client", _client_names, key="sidebar_client_name",
-        )
-        client_id = client_options[chosen_client]
-    else:
-        st.info("No clients yet — add one below.")
-        client_id = None
-        chosen_client = None
-
-    if client_id:
-        with session_scope() as session:
-            projects = list_projects(session, client_id)
-            proj_options = {p.name: p.id for p in projects}
-        if proj_options:
-            _portfolio_names = list(proj_options.keys())
-            # Same seed-from-URL pattern, but the portfolio choice is scoped
-            # to the chosen client — so if the URL portfolio doesn't belong
-            # to this client (or was deleted), we drop back to the first.
-            if "sidebar_portfolio_name" not in st.session_state:
-                _url_match = _find_name_by_slug(_url_portfolio, _portfolio_names)
-                st.session_state.sidebar_portfolio_name = _url_match or _portfolio_names[0]
-            elif st.session_state.sidebar_portfolio_name not in _portfolio_names:
-                st.session_state.sidebar_portfolio_name = _portfolio_names[0]
-            chosen_proj = st.selectbox(
-                "Portfolio", _portfolio_names, key="sidebar_portfolio_name",
-            )
-            project_id = proj_options[chosen_proj]
-        else:
-            st.info("No portfolios under this client — add one below.")
-            project_id = None
-            chosen_proj = None
-    else:
-        project_id = None
-        chosen_proj = None
-
-    # --- New client form ---
-    with st.expander("➕ New client"):
-        with st.form("new_client_form", clear_on_submit=True):
-            nc_name = st.text_input("Client name", placeholder="e.g. Heelstone")
-            nc_domain = st.text_input("Email domain (optional)", placeholder="heelstone.com")
-            if st.form_submit_button("Create client"):
-                name = nc_name.strip()
-                if not name:
-                    st.error("Name is required.")
-                else:
-                    with session_scope() as session:
-                        existing = session.query(Client).filter_by(name=name).first()
-                        if existing:
-                            st.warning(f"Client '{name}' already exists.")
-                        else:
-                            session.add(Client(
-                                name=name,
-                                email_domain=nc_domain.strip() or None,
-                            ))
-                    st.success(f"Added client: {name}")
+    with bc_proj:
+        if chosen_proj:
+            with st.popover(f"🏷️ {chosen_proj}", use_container_width=True):
+                st.caption("Switch portfolio")
+                new_proj = st.selectbox(
+                    "Portfolio",
+                    list(proj_options.keys()),
+                    index=list(proj_options.keys()).index(chosen_proj),
+                    label_visibility="collapsed",
+                    key="header_portfolio_select",
+                )
+                if new_proj != chosen_proj:
+                    st.session_state.sidebar_portfolio_name = new_proj
                     st.rerun()
-
-    # --- New project form ---
-    with st.expander("➕ New portfolio"):
-        if not client_options:
-            st.caption("Add a client first — a portfolio must belong to one.")
         else:
-            with st.form("new_project_form", clear_on_submit=True):
-                client_names = list(client_options.keys())
-                # Default the parent-client dropdown to whatever's selected in the sidebar
-                default_idx = client_names.index(chosen_client) if client_id else 0
-                np_client_name = st.selectbox(
-                    "Under client",
-                    client_names,
-                    index=default_idx,
-                    help="The portfolio will be created under this client.",
-                )
-                np_client_id = client_options[np_client_name]
-                np_name = st.text_input("Portfolio name", placeholder="e.g. Raven, Gonzo and Waxwing")
-                np_scope = st.text_area(
-                    "Scope (optional)", height=70,
-                    placeholder="Electrical Design, Civil Design and Studies",
-                )
-                np_roster = st.text_area(
-                    "Portfolio roster — attendees grouped by company (optional)",
-                    height=130,
-                    placeholder=(
-                        "E Light Electric Services, Inc: Blake Ely (BE), Ricky Dzabic (RD)\n"
-                        "Sunshare: Andrew Proctor (AP), Brian McKinney (BM)\n"
-                        "Ampacity: Dylan Wraga (DW)"
-                    ),
-                    help=(
-                        "Paste the people who normally attend meetings on this "
-                        "portfolio, one organization per line in 'Org: Name (II), …' "
-                        "format. They'll appear as portfolio roster chips on every "
-                        "meeting's Capture page."
-                    ),
-                )
-                if st.form_submit_button("Create portfolio"):
-                    name = np_name.strip()
-                    if not name:
-                        st.error("Name is required.")
-                    else:
-                        roster_to_seed = _parse_bulk_attendees(np_roster)
-                        with session_scope() as session:
-                            existing = (session.query(Project)
-                                        .filter_by(client_id=np_client_id, name=name)
-                                        .first())
-                            if existing:
-                                st.warning(
-                                    f"Portfolio '{name}' already exists under "
-                                    f"{np_client_name}."
-                                )
-                            else:
-                                proj = Project(
-                                    client_id=np_client_id,
-                                    name=name,
-                                    scope=np_scope.strip() or None,
-                                )
-                                session.add(proj)
-                                session.flush()
-                                for p in roster_to_seed:
-                                    upsert_project_attendee(
-                                        session, project_id=proj.id,
-                                        full_name=p["full_name"],
-                                        initials=p["initials"],
-                                        organization=p["organization"],
-                                    )
-                                roster_msg = (f" + {len(roster_to_seed)} roster entries"
-                                              if roster_to_seed else "")
-                                st.success(
-                                    f"Added portfolio: {np_client_name} / {name}{roster_msg}"
-                                )
-                        st.rerun()
-
-    # --- Delete portfolio (destructive — typed-name confirmation required) ---
-    with st.expander("🗑️ Delete portfolio"):
-        if not client_id or not project_id:
-            st.caption("Pick a portfolio above to delete it.")
-        else:
-            with session_scope() as session:
-                target = session.get(Project, project_id)
-                if target is None:
-                    st.caption("Portfolio not found.")
-                else:
-                    target_name = target.name
-                    target_client = target.client.name if target.client else "?"
-                    n_meetings = (session.query(Meeting)
-                                  .filter_by(project_id=project_id).count())
-                    n_schedules = (session.query(Schedule)
-                                   .filter_by(project_id=project_id).count())
-                    n_actions = (session.query(ActionItem)
-                                 .filter_by(project_id=project_id).count())
-            st.warning(
-                f"Permanently deletes **{target_client} / {target_name}** "
-                "and everything beneath it:"
-            )
             st.markdown(
-                f"- **{n_meetings}** meeting(s) — attendees, agenda, discussion, "
-                f"action items\n"
-                f"- **{n_schedules}** uploaded schedule(s)\n"
-                f"- **{n_actions}** action item(s) in the rolling log\n"
-                f"- Portfolio-specific saved roster"
+                '<span style="color:#bcbec0;font-size:13px;">'
+                'No portfolio — create one in ⚙️</span>',
+                unsafe_allow_html=True,
             )
-            confirm = st.text_input(
-                f"Type the portfolio name to confirm",
-                placeholder=target_name,
-                key="delete_project_confirm",
-            )
-            disabled = (confirm != target_name)
-            if st.button(
-                "🗑️ Permanently delete portfolio",
-                type="primary",
-                disabled=disabled,
-                use_container_width=True,
-                key="delete_project_btn",
+
+with h_dev:
+    if is_local_dev():
+        st.markdown(
+            '<div style="background:#c7bb2e;color:#111;padding:4px 10px;'
+            'border-radius:4px;font-size:10px;font-weight:700;'
+            'display:inline-block;letter-spacing:0.4px;">'
+            'LOCAL DEV</div>',
+            unsafe_allow_html=True,
+        )
+
+with h_gear:
+    with st.popover("⚙️", use_container_width=True):
+        st.caption("Manage")
+        if st.button("➕ New client", key="hdr_admin_newclient",
+                     use_container_width=True):
+            st.session_state._show_admin_dialog = "new_client"
+            st.rerun()
+        if st.button("➕ New portfolio", key="hdr_admin_newport",
+                     use_container_width=True,
+                     disabled=not client_options):
+            st.session_state._show_admin_dialog = "new_portfolio"
+            st.rerun()
+        if st.button("🗑️ Delete portfolio", key="hdr_admin_del",
+                     use_container_width=True,
+                     disabled=not project_id):
+            st.session_state._show_admin_dialog = "delete_portfolio"
+            st.rerun()
+
+# --- Global search bar (Cmd/Ctrl+K) ---
+# Second header row — wide input. Focused via the JS handler below.
+_search_l, _search_c, _search_r = st.columns([0.5, 6, 0.5])
+with _search_c:
+    _q = st.text_input(
+        "Global search",
+        placeholder="Search portfolios, meetings, agendas, actions…   (press ⌘K)",
+        key="global_search",
+        label_visibility="collapsed",
+    )
+
+# Render filtered results inline when the search has content
+def _do_search(query: str) -> list:
+    """Cross-entity fuzzy-ish search. Returns up to 20 results with kind /
+    label / action tuple. ``action`` is interpreted by the result handler
+    below to navigate."""
+    q = (query or "").strip().lower()
+    if not q:
+        return []
+    out: list[dict] = []
+    from db.models import Meeting as _M, Agenda as _A
+    with session_scope() as session:
+        # Clients
+        for c in list_clients(session):
+            if q in c.name.lower():
+                out.append({
+                    "kind": "Client", "label": c.name,
+                    "action": ("client", c.name),
+                })
+        # Portfolios
+        for c in list_clients(session):
+            for p in list_projects(session, c.id):
+                hay = f"{c.name} {p.name}".lower()
+                if q in hay:
+                    out.append({
+                        "kind": "Portfolio",
+                        "label": f"{c.name} › {p.name}",
+                        "action": ("portfolio", c.name, p.name),
+                    })
+        # Meetings — most recent 200
+        for m in (session.query(_M)
+                  .order_by(_M.meeting_date.desc())
+                  .limit(200).all()):
+            t = (m.title or "").lower()
+            if q in t or q in (m.raw_notes or "").lower()[:500]:
+                pl = m.project.name if m.project else "?"
+                cl = m.project.client.name if m.project and m.project.client else "?"
+                out.append({
+                    "kind": "Meeting",
+                    "label": f"{m.title or '(untitled)'}  ·  "
+                             f"{m.meeting_date.strftime('%b %d, %Y')}  "
+                             f"·  {cl} / {pl}",
+                    "action": ("meeting", m.id, cl, pl),
+                })
+        # Agendas
+        for a in (session.query(_A)
+                  .order_by(_A.upcoming_date.desc())
+                  .limit(200).all()):
+            t = (a.title or "").lower()
+            if q in t:
+                pl = a.project.name if a.project else "?"
+                cl = a.project.client.name if a.project and a.project.client else "?"
+                out.append({
+                    "kind": "Agenda",
+                    "label": f"{a.title or '(untitled)'}  ·  "
+                             f"{a.upcoming_date.strftime('%b %d, %Y')}  "
+                             f"·  {cl} / {pl}",
+                    "action": ("agenda", a.id, cl, pl),
+                })
+        # Open actions
+        from db.repository import all_open_actions_across_portfolios
+        for a in all_open_actions_across_portfolios(session)[:300]:
+            if q in (a.text or "").lower() or q in (a.owner or "").lower():
+                pl = a.originating_meeting.project.name if a.originating_meeting else "?"
+                cl = (a.originating_meeting.project.client.name
+                      if a.originating_meeting and a.originating_meeting.project
+                      and a.originating_meeting.project.client else "?")
+                out.append({
+                    "kind": "Action",
+                    "label": (a.text or "")[:100] + (
+                        f"  ·  {cl} / {pl}" if pl != "?" else ""
+                    ),
+                    "action": ("action", a.id, cl, pl),
+                })
+    # Quick actions
+    if q in "new meeting" or q in "start new meeting" or q in "capture":
+        out.append({
+            "kind": "Quick", "label": "Start a new meeting (clears current draft)",
+            "action": ("quick", "new_meeting"),
+        })
+    if q in "add note" or q in "new note":
+        out.append({
+            "kind": "Quick", "label": "Add a new note",
+            "action": ("quick", "new_note"),
+        })
+    if q in "draft agenda" or q in "next agenda" or q in "new agenda":
+        out.append({
+            "kind": "Quick", "label": "Draft next agenda",
+            "action": ("quick", "new_agenda"),
+        })
+    return out[:20]
+
+
+def _exec_search_action(action: tuple) -> None:
+    """Apply the navigational effect of a search result. Returns once state
+    is mutated; caller is responsible for st.rerun()."""
+    kind = action[0]
+    if kind == "client":
+        st.session_state.sidebar_client_name = action[1]
+        st.session_state.pop("sidebar_portfolio_name", None)
+    elif kind == "portfolio":
+        st.session_state.sidebar_client_name = action[1]
+        st.session_state.sidebar_portfolio_name = action[2]
+    elif kind == "meeting":
+        _, mid, cl, pl = action
+        st.session_state.sidebar_client_name = cl
+        st.session_state.sidebar_portfolio_name = pl
+        _load_meeting_into_session(mid)
+        st.session_state.nav = "📝 Review"
+    elif kind == "agenda":
+        _, aid, cl, pl = action
+        st.session_state.sidebar_client_name = cl
+        st.session_state.sidebar_portfolio_name = pl
+        st.session_state.na_agenda_id = aid
+        # Wipe editor so the agenda picker auto-loads it fresh
+        for k in list(st.session_state.keys()):
+            if k.startswith("na_") and k not in (
+                "na_loaded_for_project", "na_agenda_id"
             ):
-                try:
-                    with session_scope() as session:
-                        # Schedules (+ items via cascade) aren't on the Project's
-                        # relationship cascade list — wipe explicitly first.
-                        for sched in (session.query(Schedule)
-                                      .filter_by(project_id=project_id).all()):
-                            session.delete(sched)
-                        proj = session.get(Project, project_id)
-                        if proj is not None:
-                            session.delete(proj)
-                    # Clear any session state that points at this project
-                    st.session_state.draft_meeting_id = None
-                    st.session_state.parsed = None
-                    st.session_state.selected_attendees = []
-                    for k in ("meeting_minutes_text", "agenda_items_text",
-                              "action_items_text", "meeting_title"):
-                        st.session_state[k] = ""
-                    st.toast(f"Deleted {target_client} / {target_name}", icon="🗑️")
-                    st.rerun()
-                except Exception as exc:
-                    st.error(f"Delete failed: {exc}")
-            elif disabled and confirm:
-                st.caption(
-                    f"Name didn't match — type **{target_name}** exactly to enable the button."
+                del st.session_state[k]
+        st.session_state.nav = "📅 Next Agenda"
+    elif kind == "action":
+        _, _aid, cl, pl = action
+        st.session_state.sidebar_client_name = cl
+        st.session_state.sidebar_portfolio_name = pl
+        st.session_state.nav = "✅ Actions"
+    elif kind == "quick":
+        target = action[1]
+        if target == "new_meeting":
+            _reset_session_for_new_meeting()
+            st.session_state.nav = "📥 Capture"
+        elif target == "new_note":
+            st.session_state.nav = "📓 Notes"
+        elif target == "new_agenda":
+            st.session_state.nav = "📅 Next Agenda"
+
+
+if _q and _q.strip():
+    _results = _do_search(_q)
+    with _search_c:
+        if not _results:
+            st.caption(f"No matches for **{_q.strip()}**.")
+        else:
+            st.markdown(
+                f"<div style='font-size:11px;color:#4d4d4f;margin:6px 0 4px;'>"
+                f"{len(_results)} result{'s' if len(_results) != 1 else ''}"
+                f" — click to jump</div>",
+                unsafe_allow_html=True,
+            )
+            for _idx, _r in enumerate(_results):
+                _kind_color = {
+                    "Client":    "#185fa5",
+                    "Portfolio": "#185fa5",
+                    "Meeting":   "#278747",
+                    "Agenda":    "#c7bb2e",
+                    "Action":    "#ad1f2b",
+                    "Quick":     "#4d4d4f",
+                }.get(_r["kind"], "#4d4d4f")
+                _label = (
+                    f"<span style='background:{_kind_color};color:white;"
+                    f"padding:2px 7px;border-radius:10px;font-size:10px;"
+                    f"font-weight:700;text-transform:uppercase;"
+                    f"margin-right:8px;'>{_r['kind']}</span>"
+                    f"<span style='font-size:13px;'>"
+                    f"{_r['label']}</span>"
                 )
+                _btn_col, _lbl_col = st.columns([0.15, 5.85])
+                with _btn_col:
+                    if st.button(
+                        "Go →",
+                        key=f"search_go_{_idx}",
+                        use_container_width=True,
+                        type="primary",
+                    ):
+                        _exec_search_action(_r["action"])
+                        # Clear the search so we don't re-trigger on next render
+                        st.session_state.global_search = ""
+                        st.rerun()
+                with _lbl_col:
+                    st.markdown(
+                        f"<div style='padding-top:6px;'>{_label}</div>",
+                        unsafe_allow_html=True,
+                    )
 
-    # Sidebar no longer hosts the workflow navigator — that lives in the top
-    # tab strip in the main area now. Sidebar keeps the project picker, the
-    # New-client / New-project forms, project deletion, and the platform branding.
+st.markdown('<div class="pmo360-header-sep"></div>', unsafe_allow_html=True)
 
+
+# ============================================================
+# Admin dialogs (triggered from the ⚙️ popover)
+# ============================================================
+@st.dialog("New client", width="medium")
+def _dialog_new_client():
+    with st.form("dialog_new_client_form", clear_on_submit=True):
+        nc_name = st.text_input("Client name", placeholder="e.g. Heelstone")
+        nc_domain = st.text_input(
+            "Email domain (optional)", placeholder="heelstone.com"
+        )
+        if st.form_submit_button("Create client", type="primary",
+                                 use_container_width=True):
+            name = nc_name.strip()
+            if not name:
+                st.error("Name is required.")
+                return
+            with session_scope() as session:
+                existing = session.query(Client).filter_by(name=name).first()
+                if existing:
+                    st.warning(f"Client '{name}' already exists.")
+                    return
+                session.add(Client(
+                    name=name, email_domain=nc_domain.strip() or None,
+                ))
+            st.session_state.sidebar_client_name = name
+            st.toast(f"Added client: {name}", icon="✅")
+            st.rerun()
+
+
+@st.dialog("New portfolio", width="medium")
+def _dialog_new_portfolio():
+    if not client_options:
+        st.caption("Add a client first — a portfolio must belong to one.")
+        return
+    with st.form("dialog_new_project_form", clear_on_submit=True):
+        _names = list(client_options.keys())
+        _default_idx = _names.index(chosen_client) if chosen_client else 0
+        np_client_name = st.selectbox(
+            "Under client", _names, index=_default_idx,
+            help="The portfolio will be created under this client.",
+        )
+        np_client_id = client_options[np_client_name]
+        np_name = st.text_input(
+            "Portfolio name",
+            placeholder="e.g. Raven, Gonzo and Waxwing",
+        )
+        np_scope = st.text_area(
+            "Scope (optional)", height=70,
+            placeholder="Electrical Design, Civil Design and Studies",
+        )
+        np_roster = st.text_area(
+            "Portfolio roster (optional)", height=120,
+            placeholder=(
+                "E Light Electric Services, Inc: Blake Ely (BE), Ricky Dzabic (RD)\n"
+                "Sunshare: Andrew Proctor (AP), Brian McKinney (BM)"
+            ),
+            help="Org: Name (II), … — one company per line.",
+        )
+        if st.form_submit_button("Create portfolio", type="primary",
+                                 use_container_width=True):
+            name = np_name.strip()
+            if not name:
+                st.error("Name is required.")
+                return
+            roster_to_seed = _parse_bulk_attendees(np_roster)
+            with session_scope() as session:
+                existing = (session.query(Project)
+                            .filter_by(client_id=np_client_id, name=name)
+                            .first())
+                if existing:
+                    st.warning(
+                        f"Portfolio '{name}' already exists under "
+                        f"{np_client_name}."
+                    )
+                    return
+                proj = Project(
+                    client_id=np_client_id,
+                    name=name,
+                    scope=np_scope.strip() or None,
+                )
+                session.add(proj)
+                session.flush()
+                for p in roster_to_seed:
+                    upsert_project_attendee(
+                        session, project_id=proj.id,
+                        full_name=p["full_name"],
+                        initials=p["initials"],
+                        organization=p["organization"],
+                    )
+            # Switch the header to the new portfolio so the user lands on it
+            st.session_state.sidebar_client_name = np_client_name
+            st.session_state.sidebar_portfolio_name = name
+            roster_msg = (
+                f" + {len(roster_to_seed)} roster entries"
+                if roster_to_seed else ""
+            )
+            st.toast(
+                f"Added portfolio: {np_client_name} / {name}{roster_msg}",
+                icon="✅",
+            )
+            st.rerun()
+
+
+@st.dialog("Delete portfolio", width="medium")
+def _dialog_delete_portfolio():
+    if not project_id:
+        st.caption("Pick a portfolio first.")
+        return
+    with session_scope() as session:
+        target = session.get(Project, project_id)
+        if target is None:
+            st.caption("Portfolio not found.")
+            return
+        target_name = target.name
+        target_client = target.client.name if target.client else "?"
+        n_meetings = (
+            session.query(Meeting).filter_by(project_id=project_id).count()
+        )
+        n_schedules = (
+            session.query(Schedule).filter_by(project_id=project_id).count()
+        )
+        n_actions = (
+            session.query(ActionItem).filter_by(project_id=project_id).count()
+        )
+    st.warning(
+        f"Permanently deletes **{target_client} / {target_name}** and:"
+    )
+    st.markdown(
+        f"- **{n_meetings}** meeting(s) — attendees, agenda, discussion, "
+        f"action items\n"
+        f"- **{n_schedules}** uploaded schedule(s)\n"
+        f"- **{n_actions}** action item(s)\n"
+        f"- Portfolio-specific saved roster, agendas, and notes"
+    )
+    confirm = st.text_input(
+        "Type the portfolio name to confirm",
+        placeholder=target_name,
+        key="dialog_delete_confirm",
+    )
+    disabled = (confirm != target_name)
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🗑️ Permanently delete", type="primary",
+                     disabled=disabled, use_container_width=True,
+                     key="dialog_delete_btn"):
+            try:
+                with session_scope() as session:
+                    for sched in (session.query(Schedule)
+                                  .filter_by(project_id=project_id).all()):
+                        session.delete(sched)
+                    proj = session.get(Project, project_id)
+                    if proj is not None:
+                        session.delete(proj)
+                st.session_state.draft_meeting_id = None
+                st.session_state.parsed = None
+                st.session_state.selected_attendees = []
+                st.session_state.pop("sidebar_portfolio_name", None)
+                for k in ("meeting_minutes_text", "agenda_items_text",
+                          "action_items_text", "meeting_title"):
+                    st.session_state[k] = ""
+                st.toast(
+                    f"Deleted {target_client} / {target_name}", icon="🗑️",
+                )
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Delete failed: {exc}")
+    with c2:
+        if st.button("Cancel", use_container_width=True,
+                     key="dialog_delete_cancel"):
+            st.rerun()
+
+
+# Fire whichever dialog the user picked in the ⚙️ popover.
+_admin_action = st.session_state.pop("_show_admin_dialog", None)
+if _admin_action == "new_client":
+    _dialog_new_client()
+elif _admin_action == "new_portfolio":
+    _dialog_new_portfolio()
+elif _admin_action == "delete_portfolio":
+    _dialog_delete_portfolio()
 
 # ============================================================
 # Session state for wizard flow + navigation
 # ============================================================
 NAV_ITEMS = [
+    "🏠 Home",
     "📥 Capture", "📝 Review", "👁️ Preview", "📤 Send",
     "📅 Next Agenda", "✅ Actions", "📓 Notes", "📚 History", "📊 Schedule",
+]
+
+# Visual groups for the top tab strip. Each tuple is (label, [tab names…]).
+# A small gap is rendered between groups so the eye can scan logically:
+#   Home  |  Meeting wizard  |  Planning  |  Rolling data  |  Reference
+NAV_GROUPS = [
+    ("Home",      ["🏠 Home"]),
+    ("Meeting",   ["📥 Capture", "📝 Review", "👁️ Preview", "📤 Send"]),
+    ("Planning",  ["📅 Next Agenda"]),
+    ("Rolling",   ["✅ Actions", "📓 Notes"]),
+    ("Reference", ["📚 History", "📊 Schedule"]),
 ]
 
 if "nav" not in st.session_state:
@@ -773,9 +1228,13 @@ def _goto(name: str):
 
 
 def _render_top_tabs():
-    """Render the workflow tabs as a button row at the top of the main area."""
-    # Inject a small CSS tweak so the inactive tab buttons feel like tabs,
-    # not blocky buttons. Active = solid red (primary); inactive = white pill.
+    """Render the workflow tabs as a button row grouped by purpose. Group
+    separators are subtle vertical pipes between sections, so the eye sees
+    the wizard (Capture→Review→Preview→Send) as one block and the rolling
+    tabs (Actions/Notes) as another."""
+    # Inject CSS to keep inactive tab buttons compact and visually distinct
+    # from regular buttons. Group separators use a narrow column with a
+    # vertical-rule-ish divider.
     st.markdown(
         """
         <style>
@@ -787,22 +1246,50 @@ def _render_top_tabs():
             white-space: nowrap;
             min-height: 0;
         }
+        .nav-group-sep {
+            border-left: 1px solid #d0d0d0;
+            height: 24px;
+            margin: 4px auto 0;
+            width: 1px;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
-    cols = st.columns(len(NAV_ITEMS))
-    for i, name in enumerate(NAV_ITEMS):
-        is_active = (st.session_state.nav == name)
-        with cols[i]:
-            if st.button(
-                name,
-                key=f"tab_{i}",
-                use_container_width=True,
-                type="primary" if is_active else "secondary",
-            ):
-                if not is_active:
-                    _goto(name)
+
+    # Compute column weights — each tab gets weight 1, each separator gets
+    # weight 0.18 (narrow). Add separators between groups, not after the last.
+    weights: list[float] = []
+    tabs_for_col: list = []  # parallel list of (kind, payload):
+                             # ("tab", name)   → render tab button
+                             # ("sep",)        → render separator
+    for g_idx, (group_label, names) in enumerate(NAV_GROUPS):
+        for n in names:
+            weights.append(1.0)
+            tabs_for_col.append(("tab", n))
+        if g_idx < len(NAV_GROUPS) - 1:
+            weights.append(0.18)
+            tabs_for_col.append(("sep",))
+
+    cols = st.columns(weights)
+    for col, item in zip(cols, tabs_for_col):
+        with col:
+            if item[0] == "sep":
+                st.markdown(
+                    '<div class="nav-group-sep"></div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                name = item[1]
+                is_active = (st.session_state.nav == name)
+                if st.button(
+                    name,
+                    key=f"tab_{name}",
+                    use_container_width=True,
+                    type="primary" if is_active else "secondary",
+                ):
+                    if not is_active:
+                        _goto(name)
 
 
 _render_top_tabs()
@@ -1033,7 +1520,7 @@ def _render_dp_preview(dps, level: int = 0) -> None:
     for dp in dps:
         label = f"<b>{dp.label}:</b> " if dp.label else ""
         st.markdown(
-            f"<div style='font-size:13px;color:#1a1a1a;line-height:1.5;'>"
+            f"<div style='font-size:13px;line-height:1.5;'>"
             f"{indent}{marker} {label}{dp.content}</div>",
             unsafe_allow_html=True,
         )
@@ -1119,12 +1606,16 @@ def _na_row_border_css(key: str) -> None:
 
 
 def _na_table_header(weights: list[float], labels: list[str], key: str) -> None:
+    """Render a row of bold uppercase header cells. Text color is left
+    unspecified so the active theme decides — light text on dark, dark
+    text on light. (Previously we hardcoded #1a1a1a here, which made the
+    headers invisible in dark mode.)"""
     st.markdown(f'<div class="{key}-header">', unsafe_allow_html=True)
     h = st.columns(weights)
     for col, label in zip(h, labels):
         col.markdown(
             "<div style='font-size:11px;font-weight:700;"
-            "text-transform:uppercase;letter-spacing:0.5px;color:#1a1a1a;'>"
+            "text-transform:uppercase;letter-spacing:0.5px;'>"
             f"{label}</div>",
             unsafe_allow_html=True,
         )
@@ -1964,8 +2455,8 @@ def _render_method_cards():
             f'<div style="background:{bg};border:{border};border-radius:8px;padding:14px 16px;min-height:118px;">'
             f'<div style="width:36px;height:36px;background:{BrandColors.RED};color:white;border-radius:7px;'
             f'display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:9px;">{icon}</div>'
-            f'<div style="font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">{title}</div>'
-            f'<div style="font-size:12px;color:#1a1a1a;font-weight:500;line-height:1.45;">{sub}</div>'
+            f'<div style="font-size:14px;font-weight:700;margin-bottom:4px;">{title}</div>'
+            f'<div style="font-size:12px;font-weight:500;line-height:1.45;">{sub}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -1974,6 +2465,258 @@ def _render_method_cards():
 # ============================================================
 # Routes
 # ============================================================
+def render_home():
+    """Dashboard. Cross-portfolio view of what needs attention this week —
+    overdue actions, upcoming follow-ups, and recently-edited agendas.
+    The default landing tab; gives PMs a "what's on my plate today" view
+    instead of dumping them straight into a meeting capture flow."""
+    from db.repository import (
+        all_open_actions_across_portfolios,
+        all_notes_with_follow_up,
+        all_upcoming_agendas,
+        list_clients,
+        list_projects,
+    )
+    from datetime import timedelta as _td
+
+    today = date.today()
+    week_out = today + _td(days=7)
+
+    st.markdown(
+        '<div class="brand-banner">🏠 Home — what needs your attention</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ---- Snapshot everything we need from the DB in one pass ----
+    with session_scope() as session:
+        open_acts = all_open_actions_across_portfolios(session)
+        notes_with_fu = all_notes_with_follow_up(session)
+        upcoming_agendas = all_upcoming_agendas(session, today)
+        clients = list_clients(session)
+
+        # Build a portfolio_id → (portfolio_name, client_name) map for labels
+        portfolio_labels: dict[int, tuple[str, str]] = {}
+        for c in clients:
+            for p in list_projects(session, c.id):
+                portfolio_labels[p.id] = (p.name, c.name)
+
+        # Snapshot each row's fields outside the session so we can render later
+        overdue_rows = []
+        upcoming_action_rows = []
+        for a in open_acts:
+            label_pf, label_cl = portfolio_labels.get(
+                a.project_id, ("(deleted)", "?")
+            )
+            entry = {
+                "id": a.id,
+                "text": a.text or "",
+                "owner": a.owner or "",
+                "due": a.due_date,
+                "status": (a.status or "open").capitalize(),
+                "portfolio": label_pf,
+                "client": label_cl,
+                "project_id": a.project_id,
+            }
+            if a.due_date and a.due_date < today:
+                overdue_rows.append(entry)
+            elif a.due_date and a.due_date <= week_out:
+                upcoming_action_rows.append(entry)
+
+        note_rows = []
+        for n in notes_with_fu:
+            if not n.follow_up_date:
+                continue
+            if n.follow_up_date <= week_out:
+                label_pf, label_cl = portfolio_labels.get(
+                    n.project_id, ("(deleted)", "?")
+                )
+                note_rows.append({
+                    "id": n.id,
+                    "topic": n.topic or "(no topic)",
+                    "action": n.action_needed or "",
+                    "follow_up": n.follow_up_date,
+                    "priority": n.priority or "Medium",
+                    "portfolio": label_pf,
+                    "client": label_cl,
+                    "project_id": n.project_id,
+                    "project_area": n.project_area or "",
+                })
+
+        agenda_rows = []
+        for a in upcoming_agendas:
+            if a.upcoming_date and a.upcoming_date <= week_out:
+                label_pf, label_cl = portfolio_labels.get(
+                    a.project_id, ("(deleted)", "?")
+                )
+                agenda_rows.append({
+                    "id": a.id,
+                    "upcoming_date": a.upcoming_date,
+                    "title": a.title or "(untitled)",
+                    "portfolio": label_pf,
+                    "client": label_cl,
+                    "project_id": a.project_id,
+                })
+
+    # ---- Headline counters strip ----
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("🔴 Overdue actions", len(overdue_rows))
+    c2.metric("📅 Due this week", len(upcoming_action_rows))
+    c3.metric("🔔 Follow-ups this week", len(note_rows))
+    c4.metric("📋 Agendas next 7 days", len(agenda_rows))
+
+    # ---- Three big quick-start buttons ----
+    st.markdown(
+        "<div style='font-size:13px;font-weight:600;"
+        "margin:18px 0 6px 0;'>Quick start</div>",
+        unsafe_allow_html=True,
+    )
+    q1, q2, q3 = st.columns(3)
+    with q1:
+        if st.button(
+            "📥  Start new meeting",
+            type="primary", use_container_width=True, key="home_new_meeting",
+        ):
+            _reset_session_for_new_meeting()
+            _goto("📥 Capture")
+    with q2:
+        if st.button(
+            "📅  Draft next agenda",
+            type="primary", use_container_width=True, key="home_new_agenda",
+        ):
+            _goto("📅 Next Agenda")
+    with q3:
+        if st.button(
+            "📓  Add a note",
+            type="primary", use_container_width=True, key="home_new_note",
+        ):
+            _goto("📓 Notes")
+
+    st.divider()
+
+    # ---- Helper for rendering a "row card" for one item ----
+    def _row_card(label: str, sub: str, right: str, badge_color: str = "#bcbec0"):
+        st.markdown(
+            f"<div style='display:flex;align-items:center;gap:12px;"
+            f"padding:8px 12px;border:1px solid #e6e7e8;border-radius:6px;"
+            f"margin-bottom:6px;background:white;'>"
+            f"<div style='width:6px;height:32px;background:{badge_color};"
+            f"border-radius:3px;'></div>"
+            f"<div style='flex:1;'>"
+            f"<div style='font-size:13px;'>{label}</div>"
+            f"<div style='font-size:11px;color:#4d4d4f;margin-top:2px;'>"
+            f"{sub}</div>"
+            f"</div>"
+            f"<div style='font-size:11px;color:#4d4d4f;text-align:right;"
+            f"white-space:nowrap;'>{right}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    def _fmt_date(d):
+        if d is None:
+            return ""
+        try:
+            return d.strftime("%#m/%#d")
+        except (ValueError, AttributeError):
+            return d.strftime("%-m/%-d") if hasattr(d, "strftime") else str(d)
+
+    def _due_color(d):
+        if d is None:
+            return "#bcbec0"
+        delta = (d - today).days
+        if delta < 0:
+            return "#ad1f2b"  # red — overdue
+        if delta == 0:
+            return "#c7bb2e"  # gold — today
+        if delta <= 2:
+            return "#e88f2e"  # orange — soon
+        return "#1aa6c9"      # blue — later
+
+    # ---- Overdue actions ----
+    st.markdown(
+        "<h3 style='color:#ad1f2b;border-bottom:1px solid #ad1f2b;"
+        "padding-bottom:4px;margin-top:8px;'>🔴 Overdue actions</h3>",
+        unsafe_allow_html=True,
+    )
+    if not overdue_rows:
+        st.caption("Nothing overdue. 🎉")
+    else:
+        for r in overdue_rows[:15]:
+            days_late = (today - r["due"]).days if r["due"] else None
+            late_str = (f"{days_late}d late" if days_late else "")
+            _row_card(
+                label=r["text"][:200],
+                sub=f"{r['client']} · {r['portfolio']} · {r['owner'] or '(no owner)'}",
+                right=f"Due {_fmt_date(r['due'])} · <b style='color:#ad1f2b;'>{late_str}</b>",
+                badge_color=_due_color(r["due"]),
+            )
+        if len(overdue_rows) > 15:
+            st.caption(
+                f"…and {len(overdue_rows) - 15} more. "
+                f"Open the Actions tab on each portfolio to see everything."
+            )
+
+    # ---- Due this week ----
+    st.markdown(
+        "<h3 style='color:#ad1f2b;border-bottom:1px solid #ad1f2b;"
+        "padding-bottom:4px;margin-top:16px;'>📅 Actions due this week</h3>",
+        unsafe_allow_html=True,
+    )
+    if not upcoming_action_rows:
+        st.caption("No actions due in the next 7 days.")
+    else:
+        for r in upcoming_action_rows[:15]:
+            _row_card(
+                label=r["text"][:200],
+                sub=f"{r['client']} · {r['portfolio']} · {r['owner'] or '(no owner)'}",
+                right=f"Due {_fmt_date(r['due'])}",
+                badge_color=_due_color(r["due"]),
+            )
+
+    # ---- Follow-ups this week (notes) ----
+    st.markdown(
+        "<h3 style='color:#ad1f2b;border-bottom:1px solid #ad1f2b;"
+        "padding-bottom:4px;margin-top:16px;'>🔔 Note follow-ups this week</h3>",
+        unsafe_allow_html=True,
+    )
+    if not note_rows:
+        st.caption("No notes flagged for follow-up this week.")
+    else:
+        priority_color = {
+            "High":   "#ad1f2b",
+            "Medium": "#c7bb2e",
+            "Low":    "#bcbec0",
+        }
+        for r in note_rows[:15]:
+            area = f" — {r['project_area']}" if r["project_area"] else ""
+            _row_card(
+                label=f"{r['topic']}{area}",
+                sub=f"{r['client']} · {r['portfolio']} · {r['action'][:80]}",
+                right=f"Follow-up {_fmt_date(r['follow_up'])} · <b>{r['priority']}</b>",
+                badge_color=priority_color.get(r["priority"], "#bcbec0"),
+            )
+
+    # ---- Upcoming agendas (saved drafts with upcoming_date within 7 days) ----
+    st.markdown(
+        "<h3 style='color:#ad1f2b;border-bottom:1px solid #ad1f2b;"
+        "padding-bottom:4px;margin-top:16px;'>📋 Agendas — next 7 days</h3>",
+        unsafe_allow_html=True,
+    )
+    if not agenda_rows:
+        st.caption(
+            "No saved pre-meeting agendas with an upcoming date in the "
+            "next 7 days. Start one from Next Agenda."
+        )
+    else:
+        for r in agenda_rows:
+            _row_card(
+                label=r["title"],
+                sub=f"{r['client']} · {r['portfolio']}",
+                right=f"Meeting {_fmt_date(r['upcoming_date'])}",
+                badge_color="#185fa5",
+            )
+
+
 def render_capture():
     if not project_id:
         st.warning("Pick a client and portfolio in the sidebar to start.")
@@ -2022,9 +2765,9 @@ def render_capture():
     st.markdown(
         f'<div style="background:white;border:1px solid #bcbec0;border-radius:8px;'
         'padding:14px 20px;margin-bottom:4px;">'
-        '<div style="font-size:17px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">'
+        '<div style="font-size:17px;font-weight:700;margin-bottom:3px;">'
         'New meeting · Capture notes</div>'
-        f'<div style="font-size:12px;color:#1a1a1a;font-weight:500;">'
+        f'<div style="font-size:12px;font-weight:500;">'
         f'{client_name} · {project_name} · {today_str}</div>'
         '</div>',
         unsafe_allow_html=True,
@@ -2049,7 +2792,7 @@ def render_capture():
     sel_count = len(st.session_state.selected_attendees)
     st.markdown(
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
-        f'<span style="font-size:15px;font-weight:700;color:#1a1a1a;">👥 Attendees</span>'
+        '<span style="font-size:15px;font-weight:700;">👥 Attendees</span>'
         f'<span style="background:{BrandColors.RED};color:white;padding:2px 9px;'
         f'border-radius:10px;font-size:11px;font-weight:700;">{sel_count}</span>'
         '</div>',
@@ -2074,11 +2817,14 @@ def render_capture():
                     })
                     st.rerun()
 
-    # Company team (global roster) — always shown
+    # Company team (global roster) — always shown.
+    # Banner uses an rgba tint (8% brand-red) so it reads as a soft pink on
+    # light and a subtle dark-red wash on dark. Text inherits from theme.
     if global_roster:
         st.markdown(
-            f'<div style="background:#fce8ea;border:2px solid {BrandColors.RED};'
-            'border-radius:6px;padding:10px 13px;font-size:12px;color:#1a1a1a;'
+            f'<div style="background:rgba(173, 31, 43, 0.08);'
+            f'border:1.5px solid {BrandColors.RED};'
+            'border-radius:6px;padding:10px 13px;font-size:12px;'
             'margin-bottom:8px;font-weight:500;">'
             f'<b>🏢 Castillo Engineering team</b> — {len(global_roster)} people in '
             'the company roster. Always available on every portfolio.'
@@ -2087,11 +2833,13 @@ def render_capture():
         )
         _render_chip_group(global_roster, key_prefix="grost")
 
-    # Project-specific roster — people picked up from prior meetings on this project
+    # Project-specific roster — people picked up from prior meetings on this
+    # portfolio. Gold-tinted variant of the same banner pattern.
     if roster_data:
         st.markdown(
-            f'<div style="background:#fff7e6;border:2px solid {BrandColors.GOLD};'
-            'border-radius:6px;padding:10px 13px;font-size:12px;color:#1a1a1a;'
+            f'<div style="background:rgba(199, 187, 46, 0.10);'
+            f'border:1.5px solid {BrandColors.GOLD};'
+            'border-radius:6px;padding:10px 13px;font-size:12px;'
             'margin:12px 0 8px;font-weight:500;">'
             f'<b>📁 Portfolio roster</b> — {len(roster_data)} people saved from '
             'prior meetings on this portfolio.'
@@ -2241,12 +2989,12 @@ def render_capture():
                     info_col.markdown(
                         f'<div style="background:{bg};border:1px solid {border};'
                         'border-radius:6px;padding:8px 10px;font-size:12px;'
-                        f'display:flex;align-items:center;gap:9px;color:#1a1a1a;">'
+                        f'display:flex;align-items:center;gap:9px;">'
                         f'<span style="background:{badge};color:white;border-radius:50%;'
                         'width:26px;height:26px;display:inline-flex;align-items:center;'
                         f'justify-content:center;font-weight:700;font-size:10px;flex-shrink:0;">'
                         f'{a["initials"]}</span>'
-                        f'<span style="color:#1a1a1a;"><b>{a["full_name"]}</b><br>'
+                        f'<span style=""><b>{a["full_name"]}</b><br>'
                         f'<span style="font-size:11px;color:#4d4d4f;">{org}</span>'
                         '</span></div>',
                         unsafe_allow_html=True,
@@ -2260,7 +3008,7 @@ def render_capture():
     # --- Method picker ---
     st.markdown(
         '<p style="font-size:11px;font-weight:700;text-transform:uppercase;'
-        'letter-spacing:0.6px;color:#1a1a1a;margin:14px 0 8px;">'
+        'letter-spacing:0.6px;margin:14px 0 8px;">'
         '① Choose how you want to capture the meeting</p>',
         unsafe_allow_html=True,
     )
@@ -2269,7 +3017,7 @@ def render_capture():
     # --- Two notes boxes ---
     st.markdown(
         '<p style="font-size:11px;font-weight:700;text-transform:uppercase;'
-        'letter-spacing:0.6px;color:#1a1a1a;margin:18px 0 6px;">'
+        'letter-spacing:0.6px;margin:18px 0 6px;">'
         '② Your notes</p>',
         unsafe_allow_html=True,
     )
@@ -2325,9 +3073,9 @@ def render_capture():
     st.markdown(
         f'<div style="background:#fdeac0;border:1.5px solid {BrandColors.GOLD};'
         'border-radius:7px;padding:12px 14px;margin:14px 0;">'
-        f'<div style="font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:2px;">'
+        f'<div style="font-size:13px;font-weight:700;margin-bottom:2px;">'
         f'✨ AI assist · OpenAI {openai_model()}</div>'
-        '<div style="font-size:11.5px;color:#1a1a1a;font-weight:500;line-height:1.5;">'
+        '<div style="font-size:11.5px;font-weight:500;line-height:1.5;">'
         'Extracts attendees, agenda topics, discussion points, and action items '
         'into the structured form. You review everything before saving.</div>'
         '</div>',
@@ -2337,7 +3085,7 @@ def render_capture():
     # --- Upload zone ---
     st.markdown(
         '<p style="font-size:11px;font-weight:700;text-transform:uppercase;'
-        'letter-spacing:0.6px;color:#1a1a1a;margin:14px 0 6px;">'
+        'letter-spacing:0.6px;margin:14px 0 6px;">'
         '③ Or upload a transcript file</p>',
         unsafe_allow_html=True,
     )
@@ -2360,7 +3108,7 @@ def render_capture():
     summary_col, btn_col_skip, btn_col_parse = st.columns([3, 1, 1])
     with summary_col:
         st.markdown(
-            f'<div style="font-size:12px;color:#1a1a1a;padding-top:6px;">'
+            f'<div style="font-size:12px;padding-top:6px;">'
             f'<b>{sel_count}</b> attendees · '
             f'{len(st.session_state.meeting_minutes_text)} chars minutes · '
             f'{len(st.session_state.agenda_items_text)} chars agenda · '
@@ -2454,7 +3202,7 @@ def render_review():
             for c, a in enumerate(selected[row_start:row_start + per_row]):
                 with rcols[c]:
                     st.markdown(
-                        f"<div style='color:#1a1a1a;font-size:12px;'>"
+                        f"<div style='font-size:12px;'>"
                         f"<b>{a['full_name']}</b> ({a['initials']})<br>"
                         f"<span style='color:#4d4d4f;font-size:11px;'>{a['organization'] or '—'}</span>"
                         "</div>",
@@ -2469,7 +3217,7 @@ def render_review():
         st.markdown("---")
         st.markdown(
             f'<div style="background:#fdeac0;border:2px solid {BrandColors.GOLD};'
-            'border-radius:6px;padding:10px 13px;font-size:12px;color:#1a1a1a;'
+            'border-radius:6px;padding:10px 13px;font-size:12px;'
             'font-weight:500;margin:6px 0 10px;">'
             f'🤔 <b>AI mentioned {len(pending)} person/people not on the roster.</b> '
             "Confirm to add to this meeting, or skip if it was a misread. "
@@ -2482,7 +3230,7 @@ def render_review():
             cols_p = st.columns([3, 1, 1, 1])
             with cols_p[0]:
                 st.markdown(
-                    f"<div style='color:#1a1a1a;font-size:13px;padding-top:6px;'>"
+                    f"<div style='font-size:13px;padding-top:6px;'>"
                     f"<b>{a.full_name or a.initials}</b> "
                     f"<span style='color:#4d4d4f;'>({a.initials or '—'}) · "
                     f"{a.organization or 'no org'}</span></div>",
@@ -2557,7 +3305,7 @@ def render_review():
         with st.expander(f"👁️ Preview ({len(parsed.agenda_items)} agenda items)"):
             for ag in parsed.agenda_items:
                 st.markdown(
-                    f"<div style='font-size:13px;color:#1a1a1a;line-height:1.5;'>"
+                    f"<div style='font-size:13px;line-height:1.5;'>"
                     f"● <b>{ag.text}</b></div>",
                     unsafe_allow_html=True,
                 )
@@ -2747,7 +3495,7 @@ def render_review():
                 for dp in dps:
                     label = f"<b>{dp.label}:</b> " if dp.label else ""
                     st.markdown(
-                        f"<div style='font-size:13px;color:#1a1a1a;line-height:1.5;'>"
+                        f"<div style='font-size:13px;line-height:1.5;'>"
                         f"{indent}{marker} {label}{dp.content}</div>",
                         unsafe_allow_html=True,
                     )
@@ -2925,13 +3673,13 @@ def render_review():
     COL_WEIGHTS = [0.4, 4.5, 3.0, 1.4, 1.4, 0.5]
     COL_LABELS = ["#", "Action", "Owner(s)", "Due", "Status", ""]
 
-    # Header row
+    # Header row — no explicit color so text follows the active theme
     st.markdown('<div class="ai-header">', unsafe_allow_html=True)
     h = st.columns(COL_WEIGHTS)
     for col, label in zip(h, COL_LABELS):
         col.markdown(
             f"<div style='font-size:11px;font-weight:700;text-transform:uppercase;"
-            f"letter-spacing:0.5px;color:#1a1a1a;'>{label}</div>",
+            f"letter-spacing:0.5px;'>{label}</div>",
             unsafe_allow_html=True,
         )
     st.markdown("</div>", unsafe_allow_html=True)
@@ -3382,7 +4130,7 @@ def render_next_agenda():
     st.markdown(
         "<div style='display:flex;align-items:center;gap:8px;"
         "margin-bottom:4px;'>"
-        "<span style='font-size:13px;font-weight:600;color:#1a1a1a;'>"
+        "<span style='font-size:13px;font-weight:600;'>"
         "Working on:</span></div>",
         unsafe_allow_html=True,
     )
@@ -3809,7 +4557,7 @@ def render_next_agenda():
         if rec_key not in st.session_state:
             st.session_state[rec_key] = ""
         st.markdown(
-            f"<div style='font-weight:600;color:#1a1a1a;margin-top:8px;'>"
+            f"<div style='font-weight:600;margin-top:8px;'>"
             f"{discipline}</div>",
             unsafe_allow_html=True,
         )
@@ -4369,39 +5117,64 @@ def render_actions():
             })
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---- delete confirmation ----
+    # ---- delete confirmation (modal dialog) ----
+    # Use @st.dialog so the confirmation pops as a modal overlay rather
+    # than rendering at the bottom of a potentially-long table where the
+    # user wouldn't see it.
     if delete_id is not None:
         st.session_state.act_pending_delete_id = delete_id
         st.rerun()
+
     if st.session_state.get("act_pending_delete_id"):
-        del_id = st.session_state.act_pending_delete_id
-        del_row = next((r for r in rows_snap if r["id"] == del_id), None)
-        if del_row:
+        _pending_id = st.session_state.act_pending_delete_id
+        _pending_row = next(
+            (r for r in rows_snap if r["id"] == _pending_id), None
+        )
+
+        @st.dialog("Delete action item?", width="medium")
+        def _confirm_action_delete():
+            if _pending_row is None:
+                st.caption("(action not found — may already be deleted)")
+                if st.button("Close", use_container_width=True):
+                    st.session_state.pop("act_pending_delete_id", None)
+                    st.rerun()
+                return
             st.warning(
-                f"Delete action **#{del_id}**? "
-                f"_{del_row['text'][:80]}_"
+                f"This permanently removes action **#{_pending_id}**:"
             )
-            dcc1, dcc2, _ = st.columns([1, 1, 4])
+            st.markdown(
+                f"> {_pending_row['text'] or '(no text)'}\n\n"
+                f"**Owner:** {_pending_row['owner'] or '(none)'}  ·  "
+                f"**Due:** {_pending_row['due_date'] or '(none)'}  ·  "
+                f"**Status:** {_pending_row['status']}"
+            )
+            dcc1, dcc2 = st.columns(2)
             with dcc1:
                 if st.button("🗑️ Yes, delete",
-                             key=f"act_del_confirm_{del_id}",
+                             key=f"act_del_modal_yes_{_pending_id}",
                              type="primary", use_container_width=True):
                     try:
                         with session_scope() as session:
-                            a = session.get(ActionItem, del_id)
+                            a = session.get(ActionItem, _pending_id)
                             if a is not None:
                                 session.delete(a)
-                        st.session_state.pop("act_pending_delete_id", None)
-                        st.toast(f"Deleted action #{del_id}.", icon="🗑️")
+                        st.session_state.pop(
+                            "act_pending_delete_id", None
+                        )
+                        st.toast(
+                            f"Deleted action #{_pending_id}.", icon="🗑️",
+                        )
                         st.rerun()
                     except Exception as exc:
                         st.error(f"Delete failed: {exc}")
             with dcc2:
                 if st.button("Cancel",
-                             key=f"act_del_cancel_{del_id}",
+                             key=f"act_del_modal_no_{_pending_id}",
                              use_container_width=True):
                     st.session_state.pop("act_pending_delete_id", None)
                     st.rerun()
+
+        _confirm_action_delete()
 
     # ---- save edits button (appears only when there are changes) ----
     if pending_updates:
@@ -4803,40 +5576,67 @@ def render_notes():
             })
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---- delete confirmation ----
+    # ---- delete confirmation (modal dialog) ----
     if delete_id is not None:
         st.session_state.notes_pending_delete_id = delete_id
         st.rerun()
+
     if st.session_state.get("notes_pending_delete_id"):
-        del_id = st.session_state.notes_pending_delete_id
-        del_row = next((r for r in rows_snap if r["id"] == del_id), None)
-        if del_row:
-            preview = del_row["topic"] or del_row["action_needed"]
-            st.warning(
-                f"Delete note **#{del_id}**? "
-                f"_{(preview or '(empty)')[:80]}_"
+        _pending_id = st.session_state.notes_pending_delete_id
+        _pending_row = next(
+            (r for r in rows_snap if r["id"] == _pending_id), None
+        )
+
+        @st.dialog("Delete note?", width="medium")
+        def _confirm_note_delete():
+            if _pending_row is None:
+                st.caption("(note not found — may already be deleted)")
+                if st.button("Close", use_container_width=True):
+                    st.session_state.pop("notes_pending_delete_id", None)
+                    st.rerun()
+                return
+            preview = (
+                _pending_row["topic"]
+                or _pending_row["action_needed"]
+                or "(empty)"
             )
-            dcc1, dcc2, _ = st.columns([1, 1, 4])
+            st.warning(
+                f"This permanently removes note **#{_pending_id}**:"
+            )
+            st.markdown(
+                f"> {preview[:200]}\n\n"
+                f"**Area:** {_pending_row['project_area'] or '(none)'}  ·  "
+                f"**Source:** {_pending_row['source'] or '(none)'}  ·  "
+                f"**Priority:** {_pending_row['priority']}  ·  "
+                f"**Status:** {_pending_row['status']}"
+            )
+            dcc1, dcc2 = st.columns(2)
             with dcc1:
                 if st.button("🗑️ Yes, delete",
-                             key=f"notes_del_confirm_{del_id}",
+                             key=f"notes_del_modal_yes_{_pending_id}",
                              type="primary", use_container_width=True):
                     try:
                         with session_scope() as session:
-                            n = session.get(Note, del_id)
+                            n = session.get(Note, _pending_id)
                             if n is not None:
                                 session.delete(n)
-                        st.session_state.pop("notes_pending_delete_id", None)
-                        st.toast(f"Deleted note #{del_id}.", icon="🗑️")
+                        st.session_state.pop(
+                            "notes_pending_delete_id", None
+                        )
+                        st.toast(
+                            f"Deleted note #{_pending_id}.", icon="🗑️",
+                        )
                         st.rerun()
                     except Exception as exc:
                         st.error(f"Delete failed: {exc}")
             with dcc2:
                 if st.button("Cancel",
-                             key=f"notes_del_cancel_{del_id}",
+                             key=f"notes_del_modal_no_{_pending_id}",
                              use_container_width=True):
                     st.session_state.pop("notes_pending_delete_id", None)
                     st.rerun()
+
+        _confirm_note_delete()
 
     # ---- save button (only when there are changes) ----
     if pending_updates:
@@ -4948,7 +5748,7 @@ def _render_history_meetings():
             head_a, head_b, head_open, head_export, head_del = st.columns([3, 2, 1, 1, 1])
             with head_a:
                 st.markdown(
-                    f'<div style="font-size:14px;font-weight:700;color:#1a1a1a;">'
+                    f'<div style="font-size:14px;font-weight:700;">'
                     f'{row["date"].strftime("%B %d, %Y")} — '
                     f'{row["title"] or "Meeting"}</div>'
                     f'<div style="font-size:11px;color:#4d4d4f;margin-top:2px;">'
@@ -5272,7 +6072,7 @@ def _render_history_agendas():
                     f"Pre-meeting agenda — {r['upcoming_date'].strftime('%b %d, %Y')}"
                 )
                 st.markdown(
-                    f'<div style="font-size:14px;font-weight:700;color:#1a1a1a;">'
+                    f'<div style="font-size:14px;font-weight:700;">'
                     f'{r["upcoming_date"].strftime("%B %d, %Y")} — {title}</div>'
                     f'<div style="font-size:11px;color:#4d4d4f;margin-top:2px;">'
                     f'Agenda #{r["id"]} · updated '
@@ -5555,6 +6355,7 @@ def render_schedule():
 # Route dispatch
 # ============================================================
 ROUTES = {
+    "🏠 Home": render_home,
     "📥 Capture": render_capture,
     "📝 Review": render_review,
     "👁️ Preview": render_preview,

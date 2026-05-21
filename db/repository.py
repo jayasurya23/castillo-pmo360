@@ -239,6 +239,40 @@ def delete_note(session: Session, note_id: int) -> None:
         session.flush()
 
 
+def all_open_actions_across_portfolios(session: Session) -> list[ActionItem]:
+    """Every open/pending action across every portfolio. Used by the Home
+    dashboard to surface overdue items globally."""
+    return (
+        session.query(ActionItem)
+        .filter(ActionItem.status.in_(("open", "pending")))
+        .order_by(ActionItem.due_date.asc().nullslast())
+        .all()
+    )
+
+
+def all_notes_with_follow_up(session: Session) -> list:
+    """Notes with a follow_up_date set (any portfolio, status open). Sorted
+    by follow_up_date ascending so 'this week' bubbles to the top."""
+    return (
+        session.query(Note)
+        .filter(Note.follow_up_date.isnot(None))
+        .filter(Note.status == "open")
+        .order_by(Note.follow_up_date.asc())
+        .all()
+    )
+
+
+def all_upcoming_agendas(session: Session, today: date) -> list[Agenda]:
+    """Saved Pre-Meeting Agendas whose upcoming_date is today or later.
+    Used by Home dashboard."""
+    return (
+        session.query(Agenda)
+        .filter(Agenda.upcoming_date >= today)
+        .order_by(Agenda.upcoming_date.asc())
+        .all()
+    )
+
+
 def set_portfolio_sub_projects(
     session: Session, project_id: int, names: list,
 ) -> Project:

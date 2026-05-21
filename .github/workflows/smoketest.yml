@@ -1,0 +1,60 @@
+# End-to-end smoke test that runs on every push/PR to main.
+#
+# Builds the DB, seeds it, saves a fake parsed meeting, and generates the
+# PDF / DOCX / XLSX deliverables — catches breakage in any of those paths
+# before it ships. Doesn't touch the OpenAI API (the smoketest builds a
+# fake ParsedMeeting directly, no parsing call), so no secrets are needed.
+
+name: Smoketest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:  # manual trigger from the Actions tab
+
+jobs:
+  smoketest:
+    name: DB + docgen end-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run smoketest
+        env:
+          # Force local-FS + SQLite mode so no Postgres / SharePoint creds
+          # are needed.
+          LOCAL_DEV_MODE: "true"
+          # Dummy key — smoketest uses a fake ParsedMeeting and never calls
+          # OpenAI, but config.openai_api_key() raises if the env var is
+          # totally absent.
+          OPENAI_API_KEY: "sk-dummy-for-smoketest-no-network-calls"
+          OPENAI_MODEL: "gpt-4o-mini"
+        run: python scripts/smoketest.py
+
+      - name: Upload generated artifacts
+        # Save the PDF/DOCX/XLSX the smoketest produced so we can inspect
+        # them straight from the workflow run if something looks off.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoketest-outputs
+          path: data/outputs/
+          if-no-files-found: ignore
+          retention-days: 14

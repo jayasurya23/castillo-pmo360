@@ -1,0 +1,49 @@
+PROPRIETARY SOFTWARE LICENSE
+
+Copyright (c) 2026 Castillo Engineering. All rights reserved.
+
+This software and its source code, documentation, brand assets (including
+without limitation the "PMO 360" and "Castillo Engineering" logos), document
+templates, and associated materials (collectively, the "Software") are the
+confidential and proprietary property of Castillo Engineering.
+
+PERMITTED USE
+
+Use, reproduction, modification, and distribution of the Software are
+permitted solely by employees and authorized contractors of Castillo
+Engineering, in furtherance of Castillo Engineering's internal business
+operations, and subject to any applicable employment, contractor, or
+non-disclosure agreement.
+
+RESTRICTIONS
+
+Except as expressly permitted above, no part of the Software may be:
+
+  (a) copied, reproduced, distributed, published, displayed, transmitted,
+      sublicensed, sold, or otherwise made available to any third party;
+  (b) used to create derivative works for any purpose other than Castillo
+      Engineering's internal business operations;
+  (c) reverse-engineered, decompiled, or disassembled except to the extent
+      such restriction is prohibited by applicable law;
+  (d) used in any manner that infringes Castillo Engineering's trademarks,
+      service marks, or trade dress.
+
+NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL
+CASTILLO ENGINEERING BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY
+ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+THIRD-PARTY COMPONENTS
+
+The Software incorporates third-party open-source libraries (Streamlit,
+SQLAlchemy, ReportLab, OpenAI Python SDK, python-docx, openpyxl, pikepdf,
+pdfplumber, pypdfium2, mammoth, msal, requests, pydantic, and others) used
+under their respective licenses. Nothing in this LICENSE alters or
+supersedes the terms applicable to those third-party components.
+
+CONTACT
+
+For licensing inquiries, contact Castillo Engineering.

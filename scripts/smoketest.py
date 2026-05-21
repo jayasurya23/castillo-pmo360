@@ -108,8 +108,8 @@ def main():
             size = Path(p).stat().st_size if Path(p).exists() else 0
             print(f"   {kind}: {p} ({size:,} bytes)")
 
-    print("\n✅ Smoke test passed!")
-    print(f"\nOpen the files in data/outputs/ to inspect the branding.")
+    print("\nSmoke test passed.")
+    print("Open the files in data/outputs/ to inspect the branding.")
 
 
 if __name__ == "__main__":

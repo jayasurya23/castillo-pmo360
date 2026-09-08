@@ -254,7 +254,12 @@ def create_missing(session, orphans: list[dict], *, apply: bool,
     for i in range(len(names)):
         for j in range(i + 1, len(names)):
             a, b = names[i], names[j]
-            if SequenceMatcher(None, norm(a), norm(b)).ratio() >= 0.80:
+            na, nb = norm(a), norm(b)
+            # A plain ratio misses the commonest case: one name being a
+            # whole-word prefix of the other. "Priority Power" vs "Priority
+            # Power Management" scores only 0.72, so test containment too.
+            contained = na.startswith(nb + " ") or nb.startswith(na + " ")
+            if contained or SequenceMatcher(None, na, nb).ratio() >= 0.80:
                 near.append((a, b))
     if near:
         rule(f"POSSIBLE DUPLICATE CLIENTS ({len(near)})")

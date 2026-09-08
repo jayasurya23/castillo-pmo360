@@ -92,6 +92,17 @@ def _bootstrap_migrations(engine):
                 conn.execute(text(
                     "ALTER TABLE projects ADD COLUMN sub_projects_json JSON"
                 ))
+        if "project_number" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE projects ADD COLUMN project_number VARCHAR(50)"
+                ))
+                # create_all() builds this index on fresh DBs; existing ones
+                # need it explicitly. IF NOT EXISTS works on SQLite and Postgres.
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_projects_project_number "
+                    "ON projects (project_number)"
+                ))
 
 
 def _seed_global_roster():

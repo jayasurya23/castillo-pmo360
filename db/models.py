@@ -44,6 +44,13 @@ class Project(Base):
     id = Column(Integer, primary_key=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
     name = Column(String(300), nullable=False)
+    # Castillo job number, e.g. "264-066" or "2512-053". Monday's Portfolio
+    # board is the source of truth; populate with
+    # scripts/sync_projects_from_monday.py. Two formats are in circulation
+    # (NNN-NNN and YYMM-NNN) so this is an opaque string, never parsed.
+    # Indexed but deliberately NOT unique — a duplicate is reported by the
+    # backfill rather than raised at write time.
+    project_number = Column(String(50), index=True)
     scope = Column(Text)
     schedule_version = Column(String(20), default="V1")
     # Curated list of sub-project names within this portfolio (e.g. for the

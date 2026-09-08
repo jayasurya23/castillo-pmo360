@@ -270,6 +270,52 @@ def create_missing(session, orphans: list[dict], *, apply: bool,
     return created_projects, len(new_clients), skipped
 
 
+# ---------------------------------------------------------- client drift
+def reconcile_clients(session, exact: list, *, apply: bool) -> tuple[int, int]:
+    """Move projects whose client no longer matches Monday, then prune any
+    client this run emptied.
+
+    Monday's Client Name is free text and gets corrected in place, so a project
+    that already exists here can end up filed under a stale spelling. Only
+    clients emptied by THIS run are pruned — a client someone created
+    deliberately but has not used yet is left alone.
+    """
+    moves = []
+    for p, m in exact:
+        want = ((m["client"] or "").strip() or UNASSIGNED_CLIENT)
+        have = p.client.name.strip() if p.client else None
+        if have and norm(have) != norm(want):
+            moves.append((p, have, want))
+    if not moves:
+        return 0, 0
+
+    rule(f"{'RE-FILING' if apply else 'WOULD RE-FILE'} PROJECTS ({len(moves)})")
+    clients = {c.name.strip().lower(): c for c in session.query(Client).all()}
+    vacated = set()
+    for p, have, want in moves:
+        print(f"  {p.name[:36]:<36} {have!r} -> {want!r}")
+        vacated.add(have.strip().lower())
+        if apply:
+            tgt = clients.get(want.lower())
+            if tgt is None:
+                tgt = Client(name=want)
+                session.add(tgt)
+                session.flush()
+                clients[want.lower()] = tgt
+            p.client_id = tgt.id
+
+    pruned = 0
+    if apply:
+        session.flush()
+        for key in vacated:
+            c = clients.get(key)
+            if c is not None and not c.projects:
+                print(f"  pruned now-empty client {c.name!r}")
+                session.delete(c)
+                pruned += 1
+    return len(moves), pruned
+
+
 # ------------------------------------------------------------------------ main
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
@@ -279,6 +325,8 @@ def main() -> int:
                     help="create projects/clients that exist in Monday but not here")
     ap.add_argument("--include-unnumbered", action="store_true",
                     help="also create Monday rows that have no job number")
+    ap.add_argument("--reconcile-clients", action="store_true",
+                    help="re-file projects whose client name changed in Monday")
     ap.add_argument("--include-fuzzy", action="store_true", help="also write close matches")
     ap.add_argument("--overwrite", action="store_true",
                     help="replace a project_number that is already set")
@@ -340,7 +388,21 @@ def main() -> int:
             for p, m in writes:
                 p.project_number = m["number"]
 
-        # 2. create the ones Monday has and we don't
+        # 2. re-file projects whose client changed in Monday
+        moved = pruned = 0
+        if args.reconcile_clients:
+            moved, pruned = reconcile_clients(s, res["exact"], apply=args.apply)
+        else:
+            drift = [(p, m) for p, m in res["exact"]
+                     if p.client and m["client"]
+                     and norm(p.client.name) != norm(m["client"])]
+            if drift:
+                rule(f"CLIENT DIFFERS FROM MONDAY ({len(drift)})")
+                for p, m in drift:
+                    print(f"  {p.name[:36]:<36} here={p.client.name!r}  monday={m['client']!r}")
+                print("\n  Re-run with --reconcile-clients to re-file these.")
+
+        # 3. create the ones Monday has and we don't
         made_p = made_c = 0
         skipped_unnumbered: list[str] = []
         if args.create_missing:
@@ -357,6 +419,9 @@ def main() -> int:
         verb = "Wrote" if args.apply else "Would write"
         print(f"  {verb} {len(writes)} project number(s) onto existing projects"
               + (f"; {already} already set (use --overwrite)" if already else ""))
+        if args.reconcile_clients:
+            print(f"  {'Re-filed' if args.apply else 'Would re-file'} {moved} project(s)"
+                  + (f", pruned {pruned} emptied client(s)" if pruned else ""))
         if args.create_missing:
             print(f"  {'Created' if args.apply else 'Would create'} "
                   f"{made_p} project(s) and {made_c} client(s)")

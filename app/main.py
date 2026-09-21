@@ -6368,6 +6368,17 @@ ROUTES = {
 }
 ROUTES[st.session_state.nav]()
 
+# Global build marker — intentionally subtle, but visible on every page so a
+# successful deployment can be confirmed without opening Azure diagnostics.
+st.markdown(
+    f'<div style="margin-top:32px;padding:12px 0 4px;'
+    f'border-top:1px solid {BrandColors.LIGHT_GRAY};text-align:center;'
+    f'color:{BrandColors.DARK_GRAY};font-size:11px;letter-spacing:0.2px;">'
+    'PMO 360 · v1.0.1 · Jayasurya Bhaskar'
+    '</div>',
+    unsafe_allow_html=True,
+)
+
 # ---- Sync URL to current navigational state ----
 # Runs last so the URL reflects what's actually rendered. Defensive against
 # missing pieces (e.g. no client yet) — only writes what's available.

@@ -1,4 +1,4 @@
-# CLAUDE.md — Castillo Meeting Management Tool
+# AGENTS.md — Castillo Meeting Management Tool
 
 Read this first. It tells you what this project is, where things live, and what's left to build.
 

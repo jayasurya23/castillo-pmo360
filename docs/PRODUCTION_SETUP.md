@@ -27,14 +27,19 @@ DATABASE_URL=postgresql://castillo@castillo-db.postgres.database.azure.com:5432/
 ```
 
 ### Schema bootstrap
-First run will auto-create tables via `init_db()`. For production, switch to Alembic:
+Alembic is already set up (`migrations/`) and reads the connection string
+from `config.database_url()`, so `DATABASE_URL` above is all it needs — no
+separate Alembic config. First run of the app still auto-creates tables via
+`init_db()` and stamps the DB at the current migration head; for a fresh
+Postgres instance you can instead apply the migrations directly before
+first run:
 ```bash
-pip install alembic
-alembic init alembic
-# Configure alembic.ini to use DATABASE_URL, then:
-alembic revision --autogenerate -m "initial"
+DATABASE_URL=postgresql://castillo@castillo-db.postgres.database.azure.com:5432/castillo_meetings?sslmode=require \
+LOCAL_DEV_MODE=false \
 alembic upgrade head
 ```
+Going forward, every schema change is a new migration — see "Database
+migrations" in the README.
 
 ## 2. Azure AD app registration
 

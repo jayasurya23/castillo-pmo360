@@ -374,15 +374,29 @@ pytest
 
 ### Database migrations
 
-There's no Alembic yet. Schema changes go through two paths:
+Schema changes go through Alembic (`migrations/`), targeting the same URL
+`config.database_url()` would give the app (SQLite locally, Postgres in
+prod — `migrations/env.py` calls it directly, so there's nothing to
+configure per-environment).
 
-1. `init_db()` calls `Base.metadata.create_all()` — creates *new* tables.
-2. `_bootstrap_migrations()` in `db/session.py` runs lightweight `ALTER TABLE
-   ADD COLUMN` statements with idempotent `if-not-exists` checks.
+```bash
+# after changing db/models.py:
+alembic revision --autogenerate -m "describe the change"
+# review the generated migrations/versions/<rev>_describe_the_change.py,
+# then apply it:
+alembic upgrade head
 
-When you add a column to an existing model, add a matching `ALTER TABLE`
-block in `_bootstrap_migrations`. When you add a new model, `create_all`
-picks it up automatically — no migration needed.
+# roll back the most recent migration:
+alembic downgrade -1
+```
+
+`init_db()` still calls `Base.metadata.create_all()` on startup (so a
+brand-new dev DB doesn't need a manual `alembic upgrade` first) and then
+stamps `alembic_version` at head if it isn't stamped yet — this covers both
+fresh databases and pre-Alembic ones that only ever went through
+`create_all()`. `_bootstrap_migrations()` in `db/session.py` is the
+pre-Alembic idempotent `ALTER TABLE` shim kept only to carry old databases
+forward; don't add new columns there — write an Alembic migration instead.
 
 ---
 

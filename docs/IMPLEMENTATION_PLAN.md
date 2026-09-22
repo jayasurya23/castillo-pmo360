@@ -95,7 +95,7 @@ When PM hits "Generate next agenda":
 
 ### Pieces
 
-1. **PostgreSQL migration** — `config.database_url()` already handles this; need to add Alembic for proper migrations going forward
+1. **PostgreSQL migration** — `config.database_url()` already handles this. Alembic is set up (`migrations/`, baseline revision `7d5911baf6ed`) and reads its URL from `config.database_url()`; new schema changes should be authored as migrations from here on rather than ad hoc `ALTER TABLE` in `_bootstrap_migrations()`.
 2. **SharePoint backend** — implement `storage/backend.py::SharePointBackend` methods using `msal` for auth and Graph API for file operations
 3. **Azure AD SSO** — wrap Streamlit in `streamlit-authenticator` or a reverse proxy doing OAuth
 4. **Concurrent edits** — Postgres row locking + UI banner when another user has the meeting open

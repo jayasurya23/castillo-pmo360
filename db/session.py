@@ -2,6 +2,7 @@
 SQLAlchemy session factory. Singleton engine for the app lifetime.
 """
 from contextlib import contextmanager
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -44,10 +45,18 @@ CASTILLO_TEAM = [
 
 def init_db():
     """Create all tables, apply lightweight in-place migrations, and seed the
-    company-wide global roster. Safe to call repeatedly."""
+    company-wide global roster. Safe to call repeatedly.
+
+    Schema changes going forward should be made as Alembic migrations (see
+    migrations/) rather than added here — this function's own ALTER TABLE
+    calls exist only to carry pre-Alembic databases forward. Every DB this
+    touches also gets stamped with the current Alembic head so `alembic
+    upgrade`/`downgrade` work correctly from here on, whether the tables
+    were just created by create_all() or already existed."""
     engine = get_engine()
     Base.metadata.create_all(bind=engine)
     _bootstrap_migrations(engine)
+    _stamp_alembic_head(engine)
     _seed_global_roster()
 
 
@@ -103,6 +112,28 @@ def _bootstrap_migrations(engine):
                     "CREATE INDEX IF NOT EXISTS ix_projects_project_number "
                     "ON projects (project_number)"
                 ))
+
+
+def _stamp_alembic_head(engine):
+    """Point Alembic's version table at the current head without running any
+    migrations. create_all()/_bootstrap_migrations() above already brought
+    the schema up to date by other means (fresh DB, or a legacy DB carried
+    forward), so a real `alembic upgrade` would just re-create tables that
+    are already there. This keeps `alembic_version` in sync so the next
+    *new* migration applies cleanly with a plain `alembic upgrade head`."""
+    from alembic import command
+    from alembic.config import Config
+    from alembic.runtime.migration import MigrationContext
+
+    with engine.connect() as conn:
+        current = MigrationContext.configure(conn).get_current_revision()
+    if current is not None:
+        return  # already stamped (or a real migration has run)
+
+    repo_root = Path(__file__).resolve().parent.parent
+    alembic_cfg = Config(str(repo_root / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(repo_root / "migrations"))
+    command.stamp(alembic_cfg, "head")
 
 
 def _seed_global_roster():

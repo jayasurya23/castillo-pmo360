@@ -6,6 +6,7 @@ pydantic>=2.0.0
 
 # Database
 psycopg2-binary>=2.9.0       # PostgreSQL driver (use psycopg2 in production)
+alembic>=1.13.0              # Schema migrations
 
 # LLM
 openai>=1.30.0
